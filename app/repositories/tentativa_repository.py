@@ -1,5 +1,8 @@
 """Repositório de Tentativa (registro imutável de histórico)."""
 
+from contextlib import closing
+
+from app.database.connection import get_connection
 from app.models import Tentativa
 from app.repositories.base import BaseRepository
 
@@ -24,6 +27,45 @@ class TentativaRepository(BaseRepository[Tentativa]):
     )
     _MODELO = Tentativa
     _ORDENACAO = "realizada_em, id"
+
+    def listar_avaliadas_do_aluno_por_nivel(
+        self,
+        aluno_id: int,
+        nivel_id: int,
+        limite: int | None = None,
+    ) -> list[Tentativa]:
+        """Lista as tentativas AVALIADAS de um aluno em um nível.
+
+        Utilizada pelo motor pedagógico (Tarefa 07) para interpretar o
+        histórico. Características:
+
+            * o nível da tentativa é resolvido pelo relacionamento já
+              existente (``tentativas.exercicio_id -> exercicios.nivel_id``);
+              nenhuma informação de nível é duplicada em ``tentativas``;
+            * tentativas com resultado ``nao_avaliada`` são EXCLUÍDAS,
+              pois não participam da contagem de acertos/erros;
+            * a ordenação é da MAIS RECENTE para a mais antiga
+              (``realizada_em DESC, id DESC``), de modo que as primeiras
+              linhas representam a janela de tentativas recentes;
+            * ``limite`` (opcional) restringe a quantidade retornada —
+              a janela de domínio é aplicada pelo serviço, não aqui;
+            * consulta parametrizada (valores via ``?``).
+        """
+        sql = (
+            "SELECT t.* FROM tentativas t "
+            "JOIN exercicios e ON e.id = t.exercicio_id "
+            "WHERE t.aluno_id = ? AND e.nivel_id = ? AND t.resultado <> ? "
+            "ORDER BY t.realizada_em DESC, t.id DESC"
+        )
+        parametros: list[int | str] = [aluno_id, nivel_id, "nao_avaliada"]
+        if limite is not None:
+            sql += " LIMIT ?"
+            parametros.append(limite)
+
+        with closing(get_connection()) as connection:
+            linhas = connection.execute(sql, parametros).fetchall()
+
+        return [self._MODELO.from_row(linha) for linha in linhas]
 
     def atualizar(self, entidade: Tentativa) -> bool:
         """Bloqueia a alteração de tentativas já registradas."""

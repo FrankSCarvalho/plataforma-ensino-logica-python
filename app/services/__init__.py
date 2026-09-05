@@ -11,6 +11,9 @@ execução via ``python -m``):
       incorreta, parcialmente correta ou não avaliada.
     * ``app.services.registro_tentativas`` — orquestra o fluxo
       "resposta -> avaliação -> nova tentativa registrada" (Tarefa 06).
+    * ``app.services.motor_pedagogico`` — interpreta o histórico de
+      tentativas e decide a progressão entre níveis da mesma habilidade
+      (Tarefa 07).
 
 Nenhum destes serviços implementa o motor pedagógico (domínio,
 progressão, repetição etc.) — decisão reservada para tarefa futura.

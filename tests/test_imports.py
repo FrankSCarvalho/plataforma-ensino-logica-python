@@ -39,6 +39,8 @@ MODULOS_PRINCIPAIS = [
     # Avaliação e registro de tentativas (Tarefa 06).
     "app.services.avaliador",
     "app.services.registro_tentativas",
+    # Motor pedagógico (Tarefa 07).
+    "app.services.motor_pedagogico",
 ]
 
 
