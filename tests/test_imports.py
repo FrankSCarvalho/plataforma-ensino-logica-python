@@ -19,6 +19,9 @@ MODULOS_PRINCIPAIS = [
     "app.models.habilidade",
     "app.models.nivel",
     "app.models.exercicio",
+    "app.models.progresso_aluno",
+    "app.models.sessao_estudo",
+    "app.models.tentativa",
     "app.repositories",
     "app.repositories.base",
     "app.repositories.aluno_repository",
@@ -26,6 +29,9 @@ MODULOS_PRINCIPAIS = [
     "app.repositories.habilidade_repository",
     "app.repositories.nivel_repository",
     "app.repositories.exercicio_repository",
+    "app.repositories.progresso_aluno_repository",
+    "app.repositories.sessao_estudo_repository",
+    "app.repositories.tentativa_repository",
     "app.services",
 ]
 

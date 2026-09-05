@@ -9,5 +9,17 @@ from app.models.exercicio import Exercicio
 from app.models.habilidade import Habilidade
 from app.models.modulo import Modulo
 from app.models.nivel import Nivel
+from app.models.progresso_aluno import ProgressoAluno
+from app.models.sessao_estudo import SessaoEstudo
+from app.models.tentativa import Tentativa
 
-__all__ = ["Aluno", "Modulo", "Habilidade", "Nivel", "Exercicio"]
+__all__ = [
+    "Aluno",
+    "Modulo",
+    "Habilidade",
+    "Nivel",
+    "Exercicio",
+    "ProgressoAluno",
+    "SessaoEstudo",
+    "Tentativa",
+]

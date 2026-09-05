@@ -3,13 +3,25 @@
 from app.database.connection import get_connection
 from app.database.initialize import SCHEMA_VERSION
 
-TABELAS_ESPERADAS = {"alunos", "modulos", "habilidades", "niveis", "exercicios"}
+TABELAS_ESPERADAS = {
+    "alunos",
+    "modulos",
+    "habilidades",
+    "niveis",
+    "exercicios",
+    "sessoes_estudo",
+    "tentativas",
+    "progresso_aluno",
+}
 
-# Relacionamentos que o schema deve declarar (tabela -> tabela referenciada).
+# Relacionamentos que o schema deve declarar (tabela -> tabelas referenciadas).
 RELACIONAMENTOS_ESPERADOS = {
-    "habilidades": "modulos",
-    "niveis": "habilidades",
-    "exercicios": "niveis",
+    "habilidades": ["modulos"],
+    "niveis": ["habilidades"],
+    "exercicios": ["niveis"],
+    "sessoes_estudo": ["alunos"],
+    "tentativas": ["sessoes_estudo", "alunos", "exercicios"],
+    "progresso_aluno": ["alunos", "habilidades", "niveis"],
 }
 
 
@@ -34,13 +46,15 @@ def test_chaves_estrangeiras_ativas(banco_de_teste):
 
 
 def test_relacionamentos_declarados_no_schema(banco_de_teste):
-    for tabela, referencia in RELACIONAMENTOS_ESPERADOS.items():
+    for tabela, referencias in RELACIONAMENTOS_ESPERADOS.items():
         with get_connection() as connection:
             linhas = connection.execute(
                 f"PRAGMA foreign_key_list({tabela})"
             ).fetchall()
-        assert any(linha["table"] == referencia for linha in linhas), (
-            f"A tabela {tabela} deveria referenciar {referencia}"
+        referenciadas = {linha["table"] for linha in linhas}
+        assert set(referencias).issubset(referenciadas), (
+            f"A tabela {tabela} deveria referenciar {sorted(referencias)}; "
+            f"referencia apenas {sorted(referenciadas)}"
         )
 
 

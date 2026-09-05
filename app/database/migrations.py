@@ -81,8 +81,71 @@ MIGRACAO_2 = [
     """,
 ]
 
+# ---------------------------------------------------------------------------
+# Versão 3 — infraestrutura de acompanhamento da aprendizagem (Tarefa 04)
+# ---------------------------------------------------------------------------
+# Cria as tabelas que registram o estado atual da trajetória do aluno
+# (progresso_aluno), as sessões de estudo (sessoes_estudo) e as tentativas
+# realizadas em exercícios (tentativas).
+#
+# IMPORTANTE sobre o histórico:
+#   * Nenhuma dessas tabelas usa ON DELETE CASCADE. As tentativas antigas
+#     precisam ser preservadas mesmo quando o progresso atual é atualizado;
+#     estado atual (progresso_aluno) e histórico (sessões/tentativas) são
+#     responsabilidades distintas.
+#   * A exclusão desses registros será tratada em decisão futura; a camada
+#     de repositórios bloqueia exclusões.
+#
+# A resposta da tentativa é TEXT, que no SQLite não possui limite prático
+# de tamanho — adequado para respostas de programação (códigos longos).
+# O tempo de resolução é armazenado em segundos (inteiro), uma unidade
+# simples e consistente para cálculos futuros.
+MIGRACAO_3 = [
+    """
+    CREATE TABLE IF NOT EXISTS sessoes_estudo (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        aluno_id   INTEGER NOT NULL,
+        inicio     TEXT    NOT NULL DEFAULT (datetime('now')),
+        termino    TEXT    NULL,
+        status     TEXT    NOT NULL DEFAULT 'ativa',
+        FOREIGN KEY (aluno_id) REFERENCES alunos (id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS tentativas (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        sessao_id                INTEGER NOT NULL,
+        aluno_id                 INTEGER NOT NULL,
+        exercicio_id             INTEGER NOT NULL,
+        resposta                 TEXT    NOT NULL,
+        resultado                TEXT    NOT NULL DEFAULT 'nao_avaliada',
+        tempo_resolucao_segundos INTEGER NOT NULL DEFAULT 0,
+        realizada_em             TEXT    NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (sessao_id)    REFERENCES sessoes_estudo (id),
+        FOREIGN KEY (aluno_id)     REFERENCES alunos (id),
+        FOREIGN KEY (exercicio_id) REFERENCES exercicios (id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS progresso_aluno (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        aluno_id       INTEGER NOT NULL,
+        habilidade_id  INTEGER NOT NULL,
+        nivel_id       INTEGER NOT NULL,
+        status         TEXT    NOT NULL DEFAULT 'em_andamento',
+        criado_em      TEXT    NOT NULL DEFAULT (datetime('now')),
+        atualizado_em  TEXT    NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (aluno_id)      REFERENCES alunos (id),
+        FOREIGN KEY (habilidade_id) REFERENCES habilidades (id),
+        FOREIGN KEY (nivel_id)      REFERENCES niveis (id),
+        UNIQUE (aluno_id, habilidade_id)
+    )
+    """,
+]
+
 # Mapa de migrações na ordem de aplicação. A chave é o número da versão.
 MIGRACOES = {
     1: MIGRACAO_1,
     2: MIGRACAO_2,
+    3: MIGRACAO_3,
 }
