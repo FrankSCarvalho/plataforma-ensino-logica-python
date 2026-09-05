@@ -22,6 +22,8 @@ MODULOS_PRINCIPAIS = [
     "app.models.progresso_aluno",
     "app.models.sessao_estudo",
     "app.models.tentativa",
+    # Avaliação de respostas (Tarefa 06).
+    "app.models.avaliacao",
     "app.repositories",
     "app.repositories.base",
     "app.repositories.aluno_repository",
@@ -34,6 +36,9 @@ MODULOS_PRINCIPAIS = [
     "app.repositories.tentativa_repository",
     "app.services",
     "app.services.carga_inicial",
+    # Avaliação e registro de tentativas (Tarefa 06).
+    "app.services.avaliador",
+    "app.services.registro_tentativas",
 ]
 
 

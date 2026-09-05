@@ -20,9 +20,13 @@ class ExercicioRepository(BaseRepository[Exercicio]):
         "enunciado",
         "ordem",
         "ativo",
-        # Rótulo do tipo de exercício (migração v4). Por ora apenas
-        # armazenado — a lógica por tipo será definida em tarefas futuras.
+        # Rótulo do tipo de exercício (migração v4).
         "tipo",
+        # Resposta esperada usada pela correção automática do tipo
+        # ``prever_resultado`` (migração v5, Tarefa 06). Armazenada aqui
+        # apenas como DADO; a lógica de comparação fica no serviço de
+        # avaliação, nunca neste repositório.
+        "resposta_esperada",
     )
     _MODELO = Exercicio
     _ORDENACAO = "ordem, id"

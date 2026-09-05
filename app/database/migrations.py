@@ -171,10 +171,27 @@ MIGRACAO_4 = [
     "ALTER TABLE exercicios ADD COLUMN tipo TEXT NOT NULL DEFAULT 'resposta_textual'",
 ]
 
+# ---------------------------------------------------------------------------
+# Versão 5 — resposta esperada para correção automática (Tarefa 06)
+# ---------------------------------------------------------------------------
+# A correção do tipo ``prever_resultado`` exige que o exercício tenha uma
+# resposta esperada para comparação determinística (sem IA e sem bibliotecas
+# externas). A coluna é TEXT para permitir respostas de múltiplas linhas
+# (por exemplo, a saída completa de um programa).
+#
+# ALTER TABLE ADD COLUMN preserva todos os dados existentes e não recria
+# tabelas. O DEFAULT '' mantém os exercícios já gravados válidos: exercício
+# sem resposta esperada simplesmente não é corrigido automaticamente
+# (resultado ``nao_avaliada``), comportamento coerente com os demais tipos.
+MIGRACAO_5 = [
+    "ALTER TABLE exercicios ADD COLUMN resposta_esperada TEXT NOT NULL DEFAULT ''",
+]
+
 # Mapa de migrações na ordem de aplicação. A chave é o número da versão.
 MIGRACOES = {
     1: MIGRACAO_1,
     2: MIGRACAO_2,
     3: MIGRACAO_3,
     4: MIGRACAO_4,
+    5: MIGRACAO_5,
 }

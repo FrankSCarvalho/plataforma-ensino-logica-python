@@ -52,10 +52,10 @@ def test_migracao_cria_coluna_tipo_em_exercicios(banco_de_teste):
     assert "tipo" in _colunas_da_tabela("exercicios")
 
 
-def test_versao_do_schema_eh_4(banco_de_teste):
+def test_versao_do_schema_eh_5(banco_de_teste):
     with get_connection() as connection:
         versao = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert versao == SCHEMA_VERSION == 4
+    assert versao == SCHEMA_VERSION == 5
 
 
 # ---------------------------------------------------------------------------

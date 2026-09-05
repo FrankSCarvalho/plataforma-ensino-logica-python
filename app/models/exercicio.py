@@ -43,6 +43,12 @@ class Exercicio:
     ativo: int = 1
     # Rótulo do tipo de exercício (extensível; ver TIPOS_DE_EXERCICIO).
     tipo: str = TIPO_PADRAO
+    # Resposta esperada usada APENAS pela correção automática do tipo
+    # ``prever_resultado`` (Tarefa 06). Vazio significa "sem resposta
+    # esperada cadastrada" — nesses casos o avaliador retorna
+    # ``nao_avaliada``. O campo é preenchido pelo currículo/seed; o aluno
+    # nunca o vê.
+    resposta_esperada: str = ""
     id: int | None = None
 
     @classmethod
@@ -55,4 +61,5 @@ class Exercicio:
             ordem=linha["ordem"],
             ativo=linha["ativo"],
             tipo=linha["tipo"],
+            resposta_esperada=linha["resposta_esperada"],
         )

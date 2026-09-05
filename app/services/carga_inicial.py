@@ -27,7 +27,13 @@ nem materiais de terceiros.
 
 from __future__ import annotations
 
-from app.models import Exercicio, Habilidade, Modulo, Nivel
+from app.models import (
+    TIPO_PREVER_RESULTADO,
+    Exercicio,
+    Habilidade,
+    Modulo,
+    Nivel,
+)
 from app.repositories import (
     ExercicioRepository,
     HabilidadeRepository,
@@ -116,6 +122,8 @@ NIVEL_1: dict = {
             ),
             "ordem": 1,
             "tipo": "prever_resultado",
+            # Resposta esperada para a correção automática (Tarefa 06).
+            "resposta_esperada": "Bola",
         },
         {
             "enunciado": (
@@ -128,6 +136,7 @@ NIVEL_1: dict = {
             ),
             "ordem": 2,
             "tipo": "prever_resultado",
+            "resposta_esperada": "tres",
         },
         {
             "enunciado": (
@@ -190,6 +199,9 @@ NIVEL_2: dict = {
             ),
             "ordem": 1,
             "tipo": "prever_resultado",
+            # Resposta com múltiplas linhas: a coluna TEXT (migração v5)
+            # suporta respostas longas sem problema.
+            "resposta_esperada": "cafe\npao\nleite",
         },
         {
             "enunciado": (
@@ -201,6 +213,7 @@ NIVEL_2: dict = {
             ),
             "ordem": 2,
             "tipo": "prever_resultado",
+            "resposta_esperada": "2",
         },
         {
             "enunciado": (
@@ -213,6 +226,7 @@ NIVEL_2: dict = {
             ),
             "ordem": 3,
             "tipo": "prever_resultado",
+            "resposta_esperada": "dois",
         },
     ],
 }
@@ -322,6 +336,9 @@ def carregar_curriculo_inicial() -> dict:
         "habilidade_criada": False,
         "niveis_criados": 0,
         "exercicios_criados": 0,
+        # Quantidade de exercícios já gravados que receberam a resposta
+        # esperada nesta execução (retrocompatibilidade com a migração v5).
+        "respostas_esperadas_preenchidas": 0,
     }
 
     # ---- Módulo ------------------------------------------------------
@@ -401,6 +418,11 @@ def carregar_curriculo_inicial() -> dict:
         # A duplicidade é evitada comparando a combinação
         # (ordem, enunciado), que identifica um exercício dentro do nível.
         for definicao_exercicio in definicao_nivel["exercicios"]:
+            # Resposta esperada definida no currículo (Tarefa 06); vazia
+            # quando o exercício não possui correção automática.
+            resposta_esperada_definida = definicao_exercicio.get(
+                "resposta_esperada", ""
+            )
             exercicio_existente = next(
                 (
                     e
@@ -417,9 +439,26 @@ def carregar_curriculo_inicial() -> dict:
                         enunciado=definicao_exercicio["enunciado"],
                         ordem=definicao_exercicio["ordem"],
                         tipo=definicao_exercicio["tipo"],
+                        resposta_esperada=resposta_esperada_definida,
                     )
                 )
                 resumo["exercicios_criados"] += 1
+            elif (
+                exercicio_existente.tipo == TIPO_PREVER_RESULTADO
+                and not exercicio_existente.resposta_esperada
+                and resposta_esperada_definida
+            ):
+                # Retrocompatibilidade (Tarefa 06): exercícios gravados
+                # antes da migração v5 não têm resposta esperada. Preenche
+                # o campo UMA única vez — nas execuções seguintes o campo
+                # já está preenchido e nada é alterado (idempotência). O
+                # enunciado, a ordem e o conteúdo pedagógico já gravados
+                # NÃO são modificados.
+                exercicio_existente.resposta_esperada = (
+                    resposta_esperada_definida
+                )
+                repositorio_exercicios.atualizar(exercicio_existente)
+                resumo["respostas_esperadas_preenchidas"] += 1
 
     return resumo
 
@@ -440,3 +479,5 @@ if __name__ == "__main__":
     print(f"  Níveis criados nesta execução: {resultado['niveis_criados']}")
     print("  Exercícios criados nesta execução: "
           f"{resultado['exercicios_criados']}")
+    print("  Respostas esperadas preenchidas (retrocompatibilidade): "
+          f"{resultado['respostas_esperadas_preenchidas']}")

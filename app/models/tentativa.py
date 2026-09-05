@@ -8,21 +8,25 @@ são apagadas nem alteradas.
 import sqlite3
 from dataclasses import dataclass
 
+from app.models.avaliacao import RESULTADO_NAO_AVALIADA
+
 
 @dataclass
 class Tentativa:
     """Entidade Tentativa, persistida na tabela ``tentativas``.
 
-    O resultado utiliza uma representação simples ('correta', 'incorreta',
-    'parcialmente_correta', 'nao_avaliada') que será tratada por futuras
-    regras de avaliação — esta tarefa apenas registra o valor.
+    O resultado utiliza a representação centralizada em
+    ``app.models.avaliacao`` ('correta', 'incorreta',
+    'parcialmente_correta', 'nao_avaliada') e é preenchido pelo serviço
+    de avaliação no momento do registro — tentativas nunca são alteradas
+    depois de gravadas.
     """
 
     sessao_id: int
     aluno_id: int
     exercicio_id: int
     resposta: str
-    resultado: str = "nao_avaliada"
+    resultado: str = RESULTADO_NAO_AVALIADA
     tempo_resolucao_segundos: int = 0
     id: int | None = None
     realizada_em: str | None = None
