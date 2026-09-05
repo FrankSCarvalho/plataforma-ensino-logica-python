@@ -1,36 +1,62 @@
 """Inicialização do banco de dados SQLite.
 
 Responsável por preparar o banco antes do uso: garante que o diretório
-de dados exista e registra a versão atual do esquema.
+de dados exista e aplica as migrações de schema pendentes.
 
-Nesta fase NÃO são criadas tabelas de negócio (alunos, exercícios,
-habilidades etc.); elas serão adicionadas em tarefas futuras.
+A versão atual do esquema fica registrada no próprio banco através de
+``PRAGMA user_version``. Um banco já atualizado não é alterado — a
+inicialização é segura para bancos existentes.
 """
 
 from contextlib import closing
 
 from app.core import config
 from app.database.connection import get_connection
+from app.database.migrations import MIGRACOES
 
-# Versão atual do esquema do banco de dados.
-# Quando tabelas de negócio forem criadas nas próximas tarefas, esta
-# constante deverá ser incrementada e adicionada a lógica de migração.
-SCHEMA_VERSION = 1
+# Versão mais recente do esquema, derivada das migrações disponíveis.
+SCHEMA_VERSION = max(MIGRACOES)
+
+
+def _versao_atual(connection) -> int:
+    """Lê a versão do esquema registrada no banco."""
+    linha = connection.execute("PRAGMA user_version").fetchone()
+    return linha[0]
+
+
+def _aplicar_migracoes_pendentes(connection, versao_atual: int) -> None:
+    """Aplica, em ordem e de forma atômica, as migrações pendentes.
+
+    Toda a sequência é executada dentro de uma única transação: se
+    qualquer comando falhar, o banco permanece exatamente como estava.
+    """
+    connection.execute("BEGIN")
+    try:
+        for versao in range(versao_atual + 1, SCHEMA_VERSION + 1):
+            for script in MIGRACOES[versao]:
+                connection.execute(script)
+            # PRAGMA não aceita parâmetros ligados; o valor é um número
+            # constante do mapa de migrações, portanto seguro na string.
+            connection.execute(f"PRAGMA user_version = {versao}")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
 
 
 def initialize_database() -> None:
-    """Cria a estrutura base do banco de dados (sem tabelas de negócio).
+    """Prepara o banco de dados sem destruir dados existentes.
 
     Passos:
       1. Garante que o diretório ``data/`` exista.
-      2. Abre a conexão — isso já materializa o arquivo ``.db`` no disco.
-      3. Registra a versão do esquema usando ``PRAGMA user_version``,
-         um mecanismo nativo do SQLite para versionamento simples.
+      2. Abre a conexão — isso materializa o arquivo ``.db`` no disco.
+      3. Se o banco estiver desatualizado, aplica apenas as migrações
+         pendentes; bancos já na versão mais recente não são tocados.
     """
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     with closing(get_connection()) as connection:
-        # PRAGMA não aceita parâmetros ligados; o valor é numérico constante,
-        # portanto seguro para uso em f-string.
-        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-        connection.commit()
+        versao_atual = _versao_atual(connection)
+
+        if versao_atual < SCHEMA_VERSION:
+            _aplicar_migracoes_pendentes(connection, versao_atual)
