@@ -1,0 +1,32 @@
+# ===== Ambiente virtual =====
+.venv/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+
+# ===== Testes =====
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ===== IDE / Editores =====
+.vscode/
+.idea/
+
+# ===== Banco de dados SQLite local (gerado em tempo de execução) =====
+# A pasta data/ NÃO é ignorada por inteiro: apenas os arquivos do banco,
+# que são artefatos locais. Arquivos versionáveis dentro de data/ (como
+# .gitkeep ou futuros dados de apoio) continuam rastreados pelo Git.
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# ===== Logs =====
+*.log

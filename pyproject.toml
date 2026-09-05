@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plataforma-ensino-logica-python"
+version = "0.1.0"
+description = "Aplicativo desktop educacional para o ensino de lógica de programação."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flet>=0.86.0",
+]
+
+# Dependências adicionais usadas apenas em desenvolvimento (ex.: testes).
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+# Define que apenas os pacotes dentro de app/ fazem parte da distribuição.
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+# Diretório onde o pytest procura os testes.
+testpaths = ["tests"]
+# Garante que o diretório raiz do projeto fique no sys.path,
+# permitindo que "app" e "main" sejam importados durante os testes.
+pythonpath = ["."]
