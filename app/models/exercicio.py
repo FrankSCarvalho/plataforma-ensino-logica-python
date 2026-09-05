@@ -4,19 +4,45 @@ import sqlite3
 from dataclasses import dataclass
 
 
+# ---------------------------------------------------------------------------
+# Tipos de exercício suportados pela plataforma.
+#
+# A coluna ``tipo`` da tabela ``exercicios`` armazena um destes rótulos,
+# tornando a entidade extensível: novos tipos podem ser acrescentados
+# futuramente sem alterar o schema. Nesta etapa os rótulos apenas
+# descrevem a intenção do exercício — nenhuma lógica de correção existe.
+# ---------------------------------------------------------------------------
+TIPO_RESPOSTA_TEXTUAL = "resposta_textual"   # aluno escreve uma resposta livre
+TIPO_ESCREVER_CODIGO = "escrever_codigo"     # aluno escreve um pequeno código
+TIPO_PREVER_RESULTADO = "prever_resultado"   # aluno prevê a saída de um trecho
+
+# Rótulos conhecidos (usados para validação futura e documentação).
+TIPOS_DE_EXERCICIO = (
+    TIPO_RESPOSTA_TEXTUAL,
+    TIPO_ESCREVER_CODIGO,
+    TIPO_PREVER_RESULTADO,
+)
+
+# Tipo padrão atribuído a novos exercícios.
+TIPO_PADRAO = TIPO_RESPOSTA_TEXTUAL
+
+
 @dataclass
 class Exercicio:
     """Entidade Exercício, persistida na tabela ``exercicios``.
 
-    Representa uma unidade de prática vinculada a um nível. Nesta etapa
-    contém apenas o enunciado e a ordenação; o modelo de respostas e a
-    correção serão adicionados em tarefas futuras.
+    Representa uma unidade de prática vinculada a um nível. Contém o
+    enunciado, a ordenação dentro do nível e o ``tipo``, que prepara a
+    entidade para os diferentes formatos de exercício que serão
+    implementados em tarefas futuras (correção, respostas esperadas etc.).
     """
 
     nivel_id: int
     enunciado: str
     ordem: int = 0
     ativo: int = 1
+    # Rótulo do tipo de exercício (extensível; ver TIPOS_DE_EXERCICIO).
+    tipo: str = TIPO_PADRAO
     id: int | None = None
 
     @classmethod
@@ -28,4 +54,5 @@ class Exercicio:
             enunciado=linha["enunciado"],
             ordem=linha["ordem"],
             ativo=linha["ativo"],
+            tipo=linha["tipo"],
         )

@@ -19,6 +19,21 @@ class HabilidadeRepository(BaseRepository[Habilidade]):
     _MODELO = Habilidade
     _ORDENACAO = "ordem, id"
 
+    def listar_por_modulo(self, modulo_id: int) -> list[Habilidade]:
+        """Lista as habilidades de um módulo, na ordem pedagógica.
+
+        A ordenação segue a mesma regra da listagem padrão (``ordem, id``).
+        Consulta parametrizada (valor via ``?``).
+        """
+        with closing(get_connection()) as connection:
+            linhas = connection.execute(
+                f"SELECT * FROM {self._TABELA} "
+                "WHERE modulo_id = ? ORDER BY ordem, id",
+                (modulo_id,),
+            ).fetchall()
+
+        return [self._MODELO.from_row(linha) for linha in linhas]
+
     def excluir(self, id_registro: int) -> bool:
         """Exclui uma habilidade, desde que ela não possua níveis."""
         with closing(get_connection()) as connection:

@@ -33,6 +33,7 @@ MODULOS_PRINCIPAIS = [
     "app.repositories.sessao_estudo_repository",
     "app.repositories.tentativa_repository",
     "app.services",
+    "app.services.carga_inicial",
 ]
 
 

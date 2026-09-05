@@ -143,9 +143,38 @@ MIGRACAO_3 = [
     """,
 ]
 
+# ---------------------------------------------------------------------------
+# Versão 4 — conteúdo pedagógico do currículo (Tarefa 05)
+# ---------------------------------------------------------------------------
+# Prepara o armazenamento do conteúdo inicial do currículo:
+#
+#   * niveis: recebe colunas de conteúdo conceitual exibido antes dos
+#     exercícios (título, explicação, exemplos e observações). Optou-se por
+#     colunas na própria tabela ``niveis`` por ser a solução mais simples
+#     possível (sem estruturas de CMS): cada nível possui um único bloco de
+#     conteúdo, gravado como texto simples.
+#
+#   * exercicios: recebe a coluna ``tipo``, que torna a entidade extensível
+#     para os tipos de exercício que serão implementados futuramente
+#     (múltipla escolha, completar código, prever resultado etc.). Nesta
+#     etapa a coluna apenas armazena o rótulo do tipo — nenhuma lógica de
+#     correção é implementada.
+#
+# ALTER TABLE ADD COLUMN preserva todos os dados existentes e não recria
+# tabelas. O valor NOT NULL é permitido no SQLite porque cada coluna nova
+# possui um DEFAULT preenchido também nos registros já gravados.
+MIGRACAO_4 = [
+    "ALTER TABLE niveis ADD COLUMN conteudo_titulo      TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE niveis ADD COLUMN conteudo_explicacao  TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE niveis ADD COLUMN conteudo_exemplos    TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE niveis ADD COLUMN conteudo_observacoes TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE exercicios ADD COLUMN tipo TEXT NOT NULL DEFAULT 'resposta_textual'",
+]
+
 # Mapa de migrações na ordem de aplicação. A chave é o número da versão.
 MIGRACOES = {
     1: MIGRACAO_1,
     2: MIGRACAO_2,
     3: MIGRACAO_3,
+    4: MIGRACAO_4,
 }
