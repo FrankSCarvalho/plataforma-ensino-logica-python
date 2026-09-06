@@ -13,6 +13,11 @@ MODULOS_PRINCIPAIS = [
     "app.database.migrations",
     "app.ui",
     "app.ui.main_view",
+    # Telas do fluxo de estudo (Tarefa 08).
+    "app.ui.aluno_view",
+    "app.ui.habilidade_view",
+    "app.ui.nivel_view",
+    "app.ui.exercicio_view",
     "app.models",
     "app.models.aluno",
     "app.models.modulo",
@@ -41,6 +46,8 @@ MODULOS_PRINCIPAIS = [
     "app.services.registro_tentativas",
     # Motor pedagógico (Tarefa 07).
     "app.services.motor_pedagogico",
+    # Fluxo de estudo (Tarefa 08) — orquestração usada pela UI.
+    "app.services.fluxo_estudo",
 ]
 
 
