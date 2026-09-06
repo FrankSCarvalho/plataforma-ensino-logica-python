@@ -152,4 +152,4 @@ def build(app) -> ft.Control:
         )
     )
 
-    return ft.Column(elementos, scroll=ft.ScrollMode.AUTO, spacing=10)
+    return ft.Column(elementos, scroll=ft.ScrollMode.AUTO, spacing=10, expand=True)

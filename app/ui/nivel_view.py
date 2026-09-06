@@ -106,4 +106,5 @@ def build(app) -> ft.Control:
         ],
         scroll=ft.ScrollMode.AUTO,
         spacing=theme.ESPACO_PADRAO,
+        expand=True,
     )

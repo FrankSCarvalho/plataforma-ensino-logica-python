@@ -143,3 +143,72 @@ def test_navegacao_para_habilidades_reconstrui_tela_clicavel(
     # Não deve lançar TypeError (Card.on_click) nem qualquer outra exceção.
     app.mostrar_habilidades()
     assert page.controls
+
+
+# ---------------------------------------------------------------------------
+# Tarefa 10B — Estrutura de rolagem das telas de estudo
+# ---------------------------------------------------------------------------
+
+def _controle_raiz(app, metodo):
+    """Invoca ``metodo(app)`` e devolve o controle raiz construído."""
+    page = PageFalsa()
+    app.page = page
+    metodo(app)
+    assert page.controls, "A tela não produziu nenhum controle."
+    return page.controls[0]
+
+
+def test_tela_de_nivel_eh_rolavel(banco_de_teste):
+    """A tela de nível deve expandir e ter rolagem vertical ativa.
+
+    Sem ``expand=True``, o ``Column`` cresce indefinidamente e o
+    ``scroll=ScrollMode.AUTO`` nunca é acionado — o conteúdo fica
+    inacessível em janelas menores.
+    """
+    aluno, habilidades = _ambiente(banco_de_teste)
+    page = PageFalsa()
+    app = AplicacaoUI(page)
+    app.aluno = aluno
+
+    raiz = _controle_raiz(app, lambda a: a.mostrar_nivel(habilidades[0].id))
+    assert raiz.expand is True
+    assert raiz.scroll == ft.ScrollMode.AUTO
+
+
+def test_tela_de_alunos_eh_rolavel(banco_de_teste):
+    """A tela de seleção de aluno deve expandir e ter rolagem vertical."""
+    _ambiente(banco_de_teste)
+    page = PageFalsa()
+    app = AplicacaoUI(page)
+
+    raiz = _controle_raiz(app, lambda a: a.mostrar_selecao_aluno())
+    assert raiz.expand is True
+    assert raiz.scroll == ft.ScrollMode.AUTO
+
+
+def test_tela_de_habilidades_eh_rolavel(banco_de_teste):
+    """A tela de habilidades deve expandir e ter rolagem vertical."""
+    aluno, habilidades = _ambiente(banco_de_teste)
+    page = PageFalsa()
+    app = AplicacaoUI(page)
+    app.aluno = aluno
+
+    raiz = _controle_raiz(app, lambda a: a.mostrar_habilidades())
+    assert raiz.expand is True
+    assert raiz.scroll == ft.ScrollMode.AUTO
+
+
+def test_tela_de_exercicios_eh_rolavel(banco_de_teste):
+    """A tela de exercícios (quando há exercício) deve ser rolável."""
+    aluno, habilidades = _ambiente(banco_de_teste)
+    page = PageFalsa()
+    app = AplicacaoUI(page)
+    app.aluno = aluno
+
+    # Abre o nível e inicia os exercícios.
+    app.mostrar_nivel(habilidades[0].id)
+    fluxo_estudo.iniciar_sessao(app.estado_estudo)
+
+    raiz = _controle_raiz(app, lambda a: a.mostrar_exercicios())
+    assert raiz.expand is True
+    assert raiz.scroll == ft.ScrollMode.AUTO
