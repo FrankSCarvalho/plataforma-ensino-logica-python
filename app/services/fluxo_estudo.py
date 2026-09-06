@@ -45,6 +45,7 @@ from app.repositories import (
 )
 from app.services.motor_pedagogico import (
     RegistroComProgressao,
+    STATUS_CONCLUIDO,
     garantir_progresso_inicial,
     processar_resposta,
 )
@@ -122,6 +123,41 @@ def progresso_do_aluno(
     return ProgressoAlunoRepository().buscar_por_aluno_e_habilidade(
         aluno_id, habilidade_id
     )
+
+
+def resumo_do_progresso(aluno_id: int, habilidade_id: int) -> str:
+    """Texto informativo da situação do aluno em uma habilidade (lista).
+
+    Centraliza aqui a frase exibida pela tela de habilidades, evitando
+    regras de formatação dentro da view (que consulta o banco apenas
+    através deste serviço):
+
+        * sem progresso   -> "Estudo será iniciado no primeiro nível";
+        * em andamento    -> "Em andamento — nível atual: <nome>";
+        * concluída       -> "Concluída — nível atual: <nome>".
+    """
+    progresso = progresso_do_aluno(aluno_id, habilidade_id)
+    if progresso is None:
+        return "Estudo será iniciado no primeiro nível"
+    situacao = (
+        "Concluída" if progresso.status == STATUS_CONCLUIDO else "Em andamento"
+    )
+    return f"{situacao} — nível atual: {nome_do_nivel(progresso.nivel_id)}"
+
+
+def posicao_do_nivel(estado: EstadoEstudo) -> tuple[int, int]:
+    """Devolve ``(posicao, total)`` do nível atual dentro da habilidade.
+
+    Usado pelas telas para exibir textos como "Nível 1 de 3" e para o
+    resumo saber quando o aluno concluiu o último nível. Total zero indica
+    habilidade sem níveis (caso de banco vazio).
+    """
+    niveis = NivelRepository().listar_por_habilidade(estado.habilidade.id)
+    total = len(niveis)
+    for posicao, nivel in enumerate(niveis, start=1):
+        if nivel.id == estado.nivel.id:
+            return posicao, total
+    return 0, total
 
 
 # ---------------------------------------------------------------------------

@@ -18,10 +18,12 @@ import flet as ft
 from app.models import (
     RESULTADO_CORRETA,
     RESULTADO_INCORRETA,
+    RESULTADO_PARCIALMENTE_CORRETA,
     TIPO_ESCREVER_CODIGO,
     TIPO_PREVER_RESULTADO,
 )
 from app.services import fluxo_estudo
+from app.ui.components import theme
 
 # Rótulos amigáveis por tipo de exercício (a dica orienta o formato da
 # resposta; a correção continua sendo responsabilidade do avaliador).
@@ -36,15 +38,37 @@ _DICA_POR_TIPO = {
     ),
 }
 
+# Mensagens claras por resultado. Importante: um exercício não avaliado
+# NUNCA é apresentado como correto — a mensagem apenas informa que a
+# resposta foi registrada.
+_MENSAGEM_POR_RESULTADO = {
+    RESULTADO_CORRETA: "Resposta correta! Muito bem.",
+    RESULTADO_INCORRETA: (
+        "A resposta não correspondeu ao esperado. "
+        "Você pode tentar novamente."
+    ),
+    RESULTADO_PARCIALMENTE_CORRETA: (
+        "A resposta está parcialmente correta."
+    ),
+    "nao_avaliada": (
+        "Sua resposta foi registrada, mas este formato de exercício "
+        "ainda não possui correção automática."
+    ),
+}
 
-def _rotulo_do_resultado(resultado: str) -> str:
-    """Converte o valor interno do resultado em texto amigável."""
-    return {
-        RESULTADO_CORRETA: "Correta!",
-        RESULTADO_INCORRETA: "Incorreta.",
-        "parcialmente_correta": "Parcialmente correta.",
-        "nao_avaliada": "Resposta registrada (ainda não avaliada).",
-    }.get(resultado, resultado)
+_COR_POR_RESULTADO = {
+    RESULTADO_CORRETA: theme.COR_SUCESSO,
+    RESULTADO_INCORRETA: theme.COR_ERRO,
+    RESULTADO_PARCIALMENTE_CORRETA: theme.COR_PARCIAL,
+    "nao_avaliada": theme.COR_TEXTO_SECUNDARIO,
+}
+
+_ICONE_POR_RESULTADO = {
+    RESULTADO_CORRETA: ft.Icons.CHECK_CIRCLE,
+    RESULTADO_INCORRETA: ft.Icons.CANCEL,
+    RESULTADO_PARCIALMENTE_CORRETA: ft.Icons.TIMELAPSE,
+    "nao_avaliada": ft.Icons.INFO_OUTLINE,
+}
 
 
 def build(app) -> ft.Control:
@@ -66,15 +90,29 @@ def _cabecalho(app, estado) -> ft.Column:
         )
     return ft.Column(
         [
-            ft.Text(f"Aluno: {app.aluno.nome}", size=14),
-            ft.Text(estado.habilidade.nome, size=15, weight=ft.FontWeight.BOLD),
+            ft.Text(f"Aluno: {app.aluno.nome}", size=theme.TAMANHO_LEGENDA),
             ft.Text(
-                f"Nível: {estado.nivel.nome}",
-                size=20,
+                estado.habilidade.nome,
+                size=theme.TAMANHO_SUBTITULO,
                 weight=ft.FontWeight.BOLD,
-                color=ft.Colors.BLUE_900,
             ),
-            ft.Text(posicao, size=13, color=ft.Colors.GREY_700),
+            ft.Row(
+                [
+                    ft.Text(
+                        f"Nível: {estado.nivel.nome}",
+                        size=theme.TAMANHO_TITULO,
+                        weight=ft.FontWeight.BOLD,
+                        color=theme.COR_PRIMARIA,
+                        expand=True,
+                    ),
+                    ft.Text(
+                        posicao,
+                        size=theme.TAMANHO_LEGENDA,
+                        color=theme.COR_TEXTO_SECUNDARIO,
+                    ),
+                ],
+                spacing=8,
+            ),
             ft.Divider(),
         ],
         spacing=6,
@@ -123,8 +161,11 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
         if not resposta.strip():
             app.mostrar_aviso("Escreva uma resposta antes de enviar.")
             return
+        # Bloquea enquanto processa: impede o envio repetido da MESMA
+        # resposta através do mesmo botão.
         botao_enviar.disabled = True
         botao_continuar.disabled = True
+        campo_resposta.disabled = True
         app.page.update()
         try:
             # Fluxo completo: avaliador -> tentativa -> motor -> progresso.
@@ -132,37 +173,63 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
         except Exception:
             app.mostrar_erro("Não foi possível registrar sua resposta.")
             botao_enviar.disabled = False
+            botao_continuar.disabled = False
+            campo_resposta.disabled = False
             app.page.update()
             return
 
         avaliacao = estado.ultima_avaliacao
-        cor = {
-            RESULTADO_CORRETA: ft.Colors.GREEN_700,
-            RESULTADO_INCORRETA: ft.Colors.RED_700,
-        }.get(avaliacao.resultado, ft.Colors.GREY_800)
+        cor = _COR_POR_RESULTADO.get(avaliacao.resultado)
         elementos_resultado = [
-            ft.Text(
-                _rotulo_do_resultado(avaliacao.resultado),
-                size=16,
-                weight=ft.FontWeight.BOLD,
-                color=cor,
+            ft.Row(
+                [
+                    ft.Icon(
+                        _ICONE_POR_RESULTADO.get(
+                            avaliacao.resultado, ft.Icons.INFO_OUTLINE
+                        ),
+                        color=cor,
+                    ),
+                    ft.Text(
+                        _MENSAGEM_POR_RESULTADO.get(
+                            avaliacao.resultado, "Resultado registrado."
+                        ),
+                        size=theme.TAMANHO_TEXTO,
+                        weight=ft.FontWeight.BOLD,
+                        color=cor,
+                    ),
+                ],
+                spacing=8,
             )
         ]
         if avaliacao.feedback:
-            elementos_resultado.append(ft.Text(avaliacao.feedback, size=14))
+            elementos_resultado.append(
+                ft.Text(avaliacao.feedback, size=theme.TAMANHO_LEGENDA)
+            )
+        # A progressão NUNCA é decidida aqui: apenas o motor pedagógico
+        # decide. A UI apenas comunica o resultado de forma clara.
         if estado.houve_progressao:
             elementos_resultado.append(
                 ft.Text(
-                    "Nível concluído. Próximo nível liberado!",
+                    "Nível concluído. Você avançou para o próximo nível.",
                     size=15,
                     weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.BLUE_800,
+                    color=theme.COR_PRIMARIA,
                 )
             )
-        area_resultado.content = ft.Column(elementos_resultado, spacing=4)
+        else:
+            # Mensagem neutra (nunca "falhaste"): o aluno simplesmente
+            # continua praticando o nível atual.
+            elementos_resultado.append(
+                ft.Text(
+                    "Você continuará praticando o nível atual.",
+                    size=theme.TAMANHO_LEGENDA,
+                    color=theme.COR_TEXTO_SECUNDARIO,
+                )
+            )
+        area_resultado.content = ft.Column(elementos_resultado, spacing=6)
         area_resultado.visible = True
-        # A resposta já foi processada: liberar "Continuar" e manter o
-        # envio travado (a tentativa já registrada não pode se duplicar).
+        # A tentativa já foi registrada: o campo e o botão permanecem
+        # bloqueados (impede reenvio); só "Continuar" fica habilitado.
         botao_continuar.disabled = False
         app.page.update()
 
@@ -224,27 +291,78 @@ def _build_resumo(app, estado) -> ft.Control:
         if estado.progresso.status == "concluido"
         else "em andamento"
     )
+    respondidos = (
+        estado.corretas + estado.incorretas + estado.nao_avaliadas
+    )
+    _, total_niveis = fluxo_estudo.posicao_do_nivel(estado)
+    nivel_concluido = estado.progresso.status == "concluido"
+
+    # Próximo passo: texto informativo (a UI NUNCA decide pedagogía —
+    # apenas orienta com base no que o motor pedagógico já registrou).
+    if nivel_concluido and total_niveis == 0:
+        proximo_passo = "Habilidade concluida."
+    elif nivel_concluido:
+        proximo_passo = (
+            "Nível concluído. Você pode avançar ao próximo nível a partir "
+            "da lista de habilidades."
+        )
+    else:
+        proximo_passo = (
+            "Continue praticando: suas tentativas continuam contando para "
+            "demonstrar domínio do nível."
+        )
+
     resumo = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 [
+                    ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.SUMMARIZE,
+                                color=theme.COR_PRIMARIA,
+                            ),
+                            ft.Text(
+                                f"Nível {estado.nivel.nome} — ciclo concluído",
+                                size=theme.TAMANHO_SUBTITULO,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                        ],
+                        spacing=8,
+                    ),
                     ft.Text(
-                        f"Nível {estado.nivel.nome} — ciclo concluído",
-                        size=18,
+                        f"Ciclo encerrado: {respondidos} exercício(s) "
+                        "respondidos.",
+                        size=theme.TAMANHO_LEGENDA,
+                        color=theme.COR_TEXTO_SECUNDARIO,
+                    ),
+                    ft.Divider(),
+                    ft.Text(
+                        f"Corretas: {estado.corretas}  ·  "
+                        f"Incorretas: {estado.incorretas}  ·  "
+                        f"Não avaliadas: {estado.nao_avaliadas}"
+                    ),
+                    ft.Text(
+                        f"Situação do nível: {situacao}",
+                        size=theme.TAMANHO_TEXTO,
                         weight=ft.FontWeight.BOLD,
+                        color=(
+                            theme.COR_SUCESSO
+                            if nivel_concluido
+                            else theme.COR_TEXTO_SECUNDARIO
+                        ),
                     ),
-                    ft.Text(f"Respostas corretas: {estado.corretas}"),
-                    ft.Text(f"Respostas incorretas: {estado.incorretas}"),
+                    ft.Divider(),
                     ft.Text(
-                        f"Respostas não avaliadas: {estado.nao_avaliadas}"
+                        f"Próximo passo: {proximo_passo}",
+                        size=theme.TAMANHO_TEXTO,
                     ),
-                    ft.Text(f"Situação do nível: {situacao}"),
                     ft.Text(
-                        "Você pode praticar novamente este nível: as "
-                        "tentativas anteriores continuam valendo para a "
-                        "sua evolução.",
-                        size=13,
-                        color=ft.Colors.GREY_700,
+                        "Os dados mostrados são informativos: a decisão de "
+                        "avançar de nível é do motor pedagógico, com base "
+                        "no seu histórico de respostas.",
+                        size=theme.TAMANHO_LEGENDA,
+                        color=theme.COR_TEXTO_SECUNDARIO,
                     ),
                 ],
                 spacing=6,

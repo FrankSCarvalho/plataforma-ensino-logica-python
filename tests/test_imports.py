@@ -18,6 +18,10 @@ MODULOS_PRINCIPAIS = [
     "app.ui.habilidade_view",
     "app.ui.nivel_view",
     "app.ui.exercicio_view",
+    # Tema e componentes reutilizáveis (Tarefa 09).
+    "app.ui.components",
+    "app.ui.components.theme",
+    "app.ui.components.widgets",
     "app.models",
     "app.models.aluno",
     "app.models.modulo",

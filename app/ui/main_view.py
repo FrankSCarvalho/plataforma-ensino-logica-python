@@ -1,4 +1,4 @@
-"""Aplicação principal (Tarefa 08): navegação e estado da interface.
+"""Aplicação principal (Tarefas 08/09): navegação e estado da interface.
 
 Primeira versão do fluxo real de estudo. Este módulo contém APENAS a
 camada de apresentação/navegação:
@@ -8,14 +8,19 @@ camada de apresentação/navegação:
     * navega entre as telas (aluno -> habilidades -> nível -> exercícios)
       reconstruindo o controle da página a cada transição;
     * delega TODA regra ao serviço ``app.services.fluxo_estudo``, que por
-      sua vez usa os repositórios, o avaliador e o motor pedagógico.
+      sua vez usa os repositórios, o avaliador e o motor pedagógico;
+    * limpa o estado de estudo ao sair do fluxo (encerra a sessão ativa),
+      evitando referências antigas e sessões abandonadas (Tarefa 09).
 
 Estrutura das telas (cada arquivo com responsabilidade clara):
 
-    app/ui/aluno_view.py       -- seleção do aluno (sem autenticação)
-    app/ui/habilidade_view.py  -- lista de habilidades + progresso atual
-    app/ui/nivel_view.py       -- conteúdo conceitual do nível atual
-    app/ui/exercicio_view.py   -- exercícios, resposta, resultado, resumo
+    app/ui/aluno_view.py         -- seleção do aluno (sem autenticação)
+    app/ui/habilidade_view.py    -- lista de habilidades + progresso atual
+    app/ui/nivel_view.py         -- conteúdo conceitual do nível atual
+    app/ui/exercicio_view.py     -- exercícios, resposta, resultado, resumo
+
+A identidade visual e os componentes reutilizáveis ficam em
+``app/ui/components/`` (tema centralizado, Tarefa 09).
 """
 
 import traceback
@@ -54,8 +59,35 @@ class AplicacaoUI:
         self.page.update()
 
     # Telas (cada método delega a composição ao módulo da tela) ---------
+    def _encerrar_sessao_se_ativa(self) -> None:
+        """Encerra a sessão de estudo ativa (se houver) antes de navegar.
+
+        Evita sessões abandonadas ao sair do fluxo sem passar pelo botão
+        "Encerrar sessão" (voltar, trocar de habilidade/aluno ou fechar a
+        tela). Falhas no encerramento nunca bloqueiam a navegação.
+        """
+        if (
+            self.estado_estudo is not None
+            and self.estado_estudo.sessao is not None
+        ):
+            try:
+                fluxo_estudo.encerrar_sessao(self.estado_estudo)
+            except Exception:
+                traceback.print_exc()  # detalhe técnico apenas no console
+
+    def _limpar_estado(self) -> None:
+        """Limpa o estado de estudo anterior e encerra a sessão ativa.
+
+        Chamado em toda saída normal do fluxo (voltar às habilidades,
+        trocar de aluno, abrir outra habilidade) para que nem a sessão
+        nem os dados de um contexto vazem para o outro.
+        """
+        self._encerrar_sessao_se_ativa()
+        self.estado_estudo = None
+
     def mostrar_selecao_aluno(self) -> None:
         """Tela 1: seleção/cadastro simples do aluno."""
+        self._limpar_estado()
         self.navegar(aluno_view.build(self))
 
     def mostrar_habilidades(self) -> None:
@@ -64,6 +96,8 @@ class AplicacaoUI:
             # Defesa: voltar para a seleção quando não há aluno definido.
             self.mostrar_selecao_aluno()
             return
+        # Ao voltar à lista, qualquer sessão em andamento é encerrada.
+        self._limpar_estado()
         self.navegar(habilidade_view.build(self))
 
     def mostrar_nivel(self, habilidade_id: int) -> None:
@@ -73,6 +107,9 @@ class AplicacaoUI:
         carrega o nível apontado por ele. Erros são tratados de forma
         amigável (sem traceback para o aluno).
         """
+        # Limpa o estado da habilidade anterior antes de abrir a nova:
+        # garante que referências de exercícios/sessão antigos não vazem.
+        self._limpar_estado()
         try:
             self.estado_estudo = fluxo_estudo.abrir_habilidade(
                 self.aluno.id, habilidade_id

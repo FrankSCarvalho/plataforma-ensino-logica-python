@@ -11,6 +11,7 @@ não conhece repositories nem SQL.
 import flet as ft
 
 from app.services import fluxo_estudo
+from app.ui.components import theme
 
 
 def build(app) -> ft.Control:
@@ -18,24 +19,44 @@ def build(app) -> ft.Control:
     alunos = fluxo_estudo.listar_alunos()
 
     elementos: list[ft.Control] = [
-        ft.Text("Plataforma de Ensino de Lógica", size=28, weight=ft.FontWeight.BOLD),
-        ft.Text("Quem vai estudar agora?", size=16),
+        ft.Text(
+            "Plataforma de Ensino de Lógica",
+            size=theme.TAMANHO_TITULO_PAGINA,
+            weight=ft.FontWeight.BOLD,
+            color=theme.COR_PRIMARIA,
+        ),
+        ft.Text(
+            "Quem vai estudar agora?",
+            size=theme.TAMANHO_SUBTITULO,
+            color=theme.COR_TEXTO_SECUNDARIO,
+        ),
         ft.Divider(),
     ]
 
     if alunos:
-        # Lista de alunos existentes: um botão por aluno.
+        # Lista de alunos existentes: um botão/cartão por aluno.
         elementos.append(
-            ft.Text("Selecione um aluno cadastrado:", size=14, weight=ft.FontWeight.BOLD)
+            ft.Text(
+                "Selecione um aluno cadastrado:",
+                size=theme.TAMANHO_TEXTO,
+                weight=ft.FontWeight.BOLD,
+            )
         )
         for aluno in alunos:
             elementos.append(
                 ft.ListTile(
-                    leading=ft.Icon(ft.Icons.PERSON),
+                    leading=ft.Icon(
+                        ft.Icons.PERSON, color=theme.COR_PRIMARIA
+                    ),
                     title=ft.Text(aluno.nome, size=16),
-                    subtitle=ft.Text(f"Estudante #{aluno.id}"),
+                    subtitle=ft.Text(
+                        "Toque para começar ou continuar os estudos"
+                    ),
+                    trailing=ft.Icon(
+                        ft.Icons.CHEVRON_RIGHT, color=theme.COR_TEXTO_SECUNDARIO
+                    ),
                     on_click=lambda evento, a=aluno: _selecionar(app, a),
-                    hover_color=ft.Colors.BLUE_50,
+                    hover_color=theme.COR_DESTAQUE_FUNDO,
                 )
             )
     else:
@@ -44,10 +65,10 @@ def build(app) -> ft.Control:
                 content=ft.Text(
                     "Nenhum aluno cadastrado ainda. "
                     "Crie o primeiro aluno para começar.",
-                    color=ft.Colors.ORANGE_800,
+                    color=theme.COR_AVISO,
                 ),
                 padding=10,
-                bgcolor=ft.Colors.ORANGE_50,
+                bgcolor=theme.COR_AVISO_FUNDO,
                 border_radius=8,
             )
         )
@@ -75,7 +96,12 @@ def build(app) -> ft.Control:
         [
             ft.Divider(),
             campo_nome,
-            ft.FilledButton("Cadastrar e estudar com este aluno", on_click=cadastrar),
+            ft.FilledButton(
+                "Cadastrar e estudar com este aluno",
+                icon=ft.Icons.ADD,
+                on_click=cadastrar,
+            ),
+            ft.Container(height=8),
         ]
     )
 
@@ -83,6 +109,11 @@ def build(app) -> ft.Control:
 
 
 def _selecionar(app, aluno) -> None:
-    """Guarda o aluno escolhido no estado e avança para as habilidades."""
+    """Guarda o aluno escolhido no estado e avança para as habilidades.
+
+    Ao trocar de aluno, o estado de estudo anterior (progresso, exercícios
+    e sessão) é limpado para que nenhum dado de um aluno apareça na lista
+    de outro. A limpeza é feita pela aplicação (``main_view``).
+    """
     app.aluno = aluno
     app.mostrar_habilidades()
