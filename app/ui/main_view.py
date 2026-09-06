@@ -130,29 +130,50 @@ class AplicacaoUI:
     # ------------------------------------------------------------------
     # Tratamento de erros amigável
     # ------------------------------------------------------------------
+    def _fechar_dialogo(self, dialogo: ft.AlertDialog) -> None:
+        """Fecha o diálogo informado (API disponível no Flet 0.86.5)."""
+        dialogo.open = False
+        self.page.update()
+
     def mostrar_erro(self, mensagem: str) -> None:
         """Exibe uma mensagem amigável; o detalhe técnico vai ao console.
 
         Usada pelas telas para envolver chamadas ao serviço: o aluno
         nunca vê um traceback, mas o desenvolvedor mantém o diagnóstico
         completo na saída padrão.
+
+        Nota: ``Page.open`` não existe no Flet 0.86.5; a exibição é feita
+        via ``Page.show_dialog`` (única API de exibição disponível aqui).
         """
-        self.page.open(
-            ft.SnackBar(
-                content=ft.Text(mensagem, color=ft.Colors.WHITE),
-                bgcolor=ft.Colors.RED_700,
-                duration=4000,
-            )
+        dialogo = ft.AlertDialog(
+            title=ft.Text("Erro"),
+            content=ft.Text(mensagem),
+            actions=[
+                ft.TextButton(
+                    "OK", on_click=lambda evento: self._fechar_dialogo(dialogo)
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
+        self.page.show_dialog(dialogo)
 
     def mostrar_aviso(self, mensagem: str) -> None:
-        """Exibe uma mensagem informativa (ex.: sessão encerrada)."""
-        self.page.open(
-            ft.SnackBar(
-                content=ft.Text(mensagem, color=ft.Colors.WHITE),
-                duration=3000,
-            )
+        """Exibe uma mensagem informativa (ex.: sessão encerrada).
+
+        Nota: ``Page.open`` não existe no Flet 0.86.5; a exibição é feita
+        via ``Page.show_dialog`` (única API de exibição disponível aqui).
+        """
+        dialogo = ft.AlertDialog(
+            title=ft.Text("Aviso"),
+            content=ft.Text(mensagem),
+            actions=[
+                ft.TextButton(
+                    "OK", on_click=lambda evento: self._fechar_dialogo(dialogo)
+                )
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
+        self.page.show_dialog(dialogo)
 
 
 def build_main_view(page: ft.Page) -> None:

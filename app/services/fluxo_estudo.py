@@ -64,7 +64,13 @@ class EstadoEstudo:
         * ``indice_exercicio`` — exercício corrente na lista;
         * contadores do resumo (apenas informativos);
         * ``ultima_avaliacao``/``ultima_progressao`` — resultado da última
-          resposta, para exibição do resultado e da progressão.
+          resposta, para exibição do resultado e da progressão;
+        * ``houve_progressao`` — reflete EXCLUSIVAMENTE a última resposta
+          processada (True somente na resposta que causou progressão);
+        * ``resumo_nivel_concluido`` — números do nível recém-concluído,
+          preservados no momento da progressão para que a UI exiba o
+          resumo ANTES de o aluno entrar no novo nível (``None`` quando
+          não há progressão pendente).
     """
 
     aluno: Aluno
@@ -83,6 +89,7 @@ class EstadoEstudo:
     ultima_progressao: RegistroComProgressao | None = None
     # Marca temporária usada pela UI para mostrar a mensagem de avanço.
     houve_progressao: bool = False
+    resumo_nivel_concluido: dict | None = None
     historico: list = field(default_factory=list)
 
 
@@ -287,6 +294,25 @@ def responder(estado: EstadoEstudo, resposta: str) -> EstadoEstudo:
             raise ValueError(
                 "O próximo nível não foi encontrado no banco de dados."
             )
+        # Preserva o resumo do nível ANTERIOR antes de zerar os contadores:
+        # a UI exibe este resumo antes de entrar no novo nível.
+        estado.resumo_nivel_concluido = {
+            "nivel_id": estado.nivel.id,
+            "nivel_nome": estado.nivel.nome,
+            "corretas": estado.corretas,
+            "incorretas": estado.incorretas,
+            "nao_avaliadas": estado.nao_avaliadas,
+            "total_respondidos": (
+                estado.corretas
+                + estado.incorretas
+                + estado.nao_avaliadas
+            ),
+            "situacao": "Nível concluído",
+            "proximo_passo": (
+                f"Você avançou para o nível {novo_nivel.nome}. "
+                "Clique em continuar para começar."
+            ),
+        }
         estado.nivel = novo_nivel
         estado.exercicios = ExercicioRepository().listar_por_nivel(
             novo_nivel.id
@@ -301,11 +327,10 @@ def responder(estado: EstadoEstudo, resposta: str) -> EstadoEstudo:
         # Quando a lista termina, ``exercicio_atual`` passa a devolver
         # ``None`` e a UI apresenta o resumo.
         #
-        # NOTA: NÃO resetamos ``houve_progressao`` aqui. Uma vez que o
-        # aluno progrediu em um ciclo de respostas, a flag permanece
-        # True para que a UI saiba que houve progressão — mesmo que as
-        # respostas seguintes (ainda no mesmo ciclo) não gerem nova
-        # progressão. A flag é zerada apenas em ``abrir_habilidade``.
+        # NOTA: Resetamos ``houve_progressao`` aqui para que a flag
+        # represente APENAS o resultado da última resposta processada.
+        # Ela será True apenas na resposta que causou progressão.
+        estado.houve_progressao = False
         estado.indice_exercicio += 1
 
     return estado

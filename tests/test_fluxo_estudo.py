@@ -319,3 +319,122 @@ def test_responder_sem_sessao_levanta_erro(banco_de_teste):
     )
     with pytest.raises(ValueError, match="sessão"):
         fluxo_estudo.responder(estado, "qualquer resposta")
+
+
+# ---------------------------------------------------------------------------
+# Tarefa 10A — BUG-02: ``houve_progressao`` reflete a ÚLTIMA resposta
+# ---------------------------------------------------------------------------
+
+def _responder_uma_vez(estado):
+    """Responde o exercício corrente uma única vez (reinicia se preciso)."""
+    exercicio = fluxo_estudo.exercicio_atual(estado)
+    if exercicio is None:
+        fluxo_estudo.reiniciar_lista_de_exercicios(estado)
+        exercicio = fluxo_estudo.exercicio_atual(estado)
+    fluxo_estudo.responder(estado, exercicio.resposta_esperada or "livre")
+
+
+def test_houve_progressao_reflete_apenas_a_ultima_resposta(banco_de_teste):
+    """A flag NÃO pode ficar presa em True depois da progressão.
+
+    Cenário 1: resposta que causa progressão -> True.
+    Cenário 2: resposta seguinte (novo nível) sem progressão -> False.
+    Cenário 3: resposta posterior que causa progressão -> True.
+    """
+    aluno, seed = _ambiente(banco_de_teste)
+    habilidade = _primeira_habilidade(seed)
+    estado = fluxo_estudo.abrir_habilidade(aluno.id, habilidade.id)
+    fluxo_estudo.iniciar_sessao(estado)
+
+    # Cenário 1: janela completa de acertos promove o aluno.
+    _responder_ate(estado, JANELA_DOMINIO)
+    assert estado.houve_progressao is True
+
+    # Cenário 2: a resposta seguinte (já no novo nível) NÃO progrediu.
+    _responder_uma_vez(estado)
+    assert estado.houve_progressao is False
+
+    # Cenário 3: completar a janela novamente promove de novo.
+    _responder_ate(estado, JANELA_DOMINIO)
+    assert estado.houve_progressao is True
+
+
+def test_resposta_sem_progressao_zera_flag_mesmo_apos_haber_progredido(
+    banco_de_teste,
+):
+    """Resposta normal no novo nível devolve a flag para False."""
+    aluno, seed = _ambiente(banco_de_teste)
+    estado = fluxo_estudo.abrir_habilidade(
+        aluno.id, _primeira_habilidade(seed).id
+    )
+    fluxo_estudo.iniciar_sessao(estado)
+    _responder_ate(estado, JANELA_DOMINIO)
+    assert estado.houve_progressao is True
+    _responder_uma_vez(estado)
+    assert estado.houve_progressao is False
+    _responder_uma_vez(estado)
+    assert estado.houve_progressao is False
+
+
+# ---------------------------------------------------------------------------
+# Tarefa 10A — BUG-03: resumo do nível recém-concluído
+# ---------------------------------------------------------------------------
+
+def test_abrir_habilidade_comeca_sem_resumo_pendente(banco_de_teste):
+    """O estado inicial de uma habilidade não tem resumo pendente."""
+    aluno, seed = _ambiente(banco_de_teste)
+    estado = _abrir_estado_simples(aluno, seed)
+    assert estado.resumo_nivel_concluido is None
+
+
+def _abrir_estado_simples(aluno, seed):
+    return fluxo_estudo.abrir_habilidade(
+        aluno.id, _primeira_habilidade(seed).id
+    )
+
+
+def test_progressao_preserva_resumo_do_nivel_anterior(banco_de_teste):
+    """O resumo pendente pertence ao nível que acabou de ser concluído.
+
+    Os contadores do estado são zerados na progressão; o resumo deve
+    manter os números do nível ANTERIOR para a UI exibi-los antes de
+    entrar no novo nível.
+    """
+    aluno, seed = _ambiente(banco_de_teste)
+    habilidade = _primeira_habilidade(seed)
+    estado = fluxo_estudo.abrir_habilidade(aluno.id, habilidade.id)
+    fluxo_estudo.iniciar_sessao(estado)
+    niveis = NIVEIS.listar_por_habilidade(habilidade.id)
+
+    _responder_ate(estado, JANELA_DOMINIO)
+    assert estado.houve_progressao is True
+
+    resumo = estado.resumo_nivel_concluido
+    assert resumo is not None
+    # O resumo é do nível concluído (o primeiro), não do novo.
+    assert resumo["nivel_id"] == niveis[0].id
+    assert resumo["situacao"] == "Nível concluído"
+    # Os números batem com o total informado e são maiores que zero.
+    assert resumo["total_respondidos"] > 0
+    assert (
+        resumo["corretas"]
+        + resumo["incorretas"]
+        + resumo["nao_avaliadas"]
+        == resumo["total_respondidos"]
+    )
+    # O novo nível já está no estado, mas os contadores começam zerados.
+    assert estado.nivel.id == niveis[1].id
+    assert estado.corretas == 0
+    assert estado.incorretas == 0
+    assert estado.nao_avaliadas == 0
+    assert estado.indice_exercicio == 0
+
+
+def test_resumo_pendente_nao_eh_criado_sem_progressao(banco_de_teste):
+    """Respostas normais (sem domínio) não criam resumo pendente."""
+    aluno, seed = _ambiente(banco_de_teste)
+    estado = _abrir_estado_simples(aluno, seed)
+    fluxo_estudo.iniciar_sessao(estado)
+    _responder_uma_vez(estado)
+    assert estado.houve_progressao is False
+    assert estado.resumo_nivel_concluido is None

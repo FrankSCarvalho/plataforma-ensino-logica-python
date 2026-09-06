@@ -134,9 +134,11 @@ def build(app) -> ft.Control:
                             spacing=8,
                         ),
                         padding=theme.ESPACO_INTERNO,
-                    ),
-                    on_click=lambda evento, h=habilidade: app.mostrar_nivel(
-                        h.id
+                        # O clique fica no Container interno porque o Card
+                        # do Flet 0.86.5 não aceita ``on_click`` diretamente.
+                        on_click=lambda evento, h=habilidade: app.mostrar_nivel(
+                            h.id
+                        ),
                     ),
                 )
             )

@@ -8,7 +8,11 @@ Responsabilidades desta tela (APENAS apresentação):
     * enviar a resposta AO SERVIÇO ``fluxo_estudo.responder``, que aciona
       avaliador -> tentativa -> motor pedagógico (nenhuma regra aqui);
     * mostrar o resultado, a mensagem de progressão (quando houver) e o
-      resumo informativo do nível ao final da lista.
+      resumo informativo do nível ao final da lista;
+    * quando a resposta anterior causou progressão, exibir PRIMEIRO o
+      resumo do nível recém-concluído (preservado em
+      ``estado.resumo_nivel_concluido``) e só carregar o novo nível após
+      a ação de continuar do aluno.
 
 A tela NUNCA executa código do aluno e nunca decide pedagogia.
 """
@@ -72,8 +76,14 @@ _ICONE_POR_RESULTADO = {
 
 
 def build(app) -> ft.Control:
-    """Monta a tela corrente: exercício ou resumo (fim da lista)."""
+    """Monta a tela corrente: resumo de nível anterior -> exercício ou resumo (fim da lista)."""
     estado = app.estado_estudo
+    
+    # PRIORIDADE: Se há resumo de nível concluído (apenas após progressão),
+    # mostrar o resumo do nível anterior antes de carregar o novo nível.
+    if estado.resumo_nivel_concluido is not None:
+        return _build_resumo_nivel_concluido(app, estado)
+    
     exercicio = fluxo_estudo.exercicio_atual(estado)
     if exercicio is None:
         return _build_resumo(app, estado)
@@ -271,6 +281,89 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
             campo_resposta,
             area_resultado,
             acoes,
+        ],
+        scroll=ft.ScrollMode.AUTO,
+        spacing=12,
+        expand=True,
+    )
+
+
+def _build_resumo_nivel_concluido(app, estado) -> ft.Control:
+    """Resumo do nível recém-concluído, exibido antes do próximo nível.
+    
+    Mostra os dados do nível que acabou de ser concluído, sem usar os
+    contadores do ciclo atual (que já foram resetados pelo fluxo de
+    progressão). O resumo é armazenado em ``estado.resumo_nivel_concluido``
+    no momento exato em que a progressão ocorre, preservando os dados do
+    nível anterior.
+    """
+    resumo = estado.resumo_nivel_concluido
+    
+    def continuar(evento) -> None:
+        """Limpa o resumo pendente e recarrega a tela para o novo nível."""
+        estado.resumo_nivel_concluido = None
+        app.mostrar_exercicios()
+    
+    return ft.Column(
+        [
+            _cabecalho(app, estado),
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Icon(
+                                    ft.Icons.SUMMARIZE,
+                                    color=theme.COR_PRIMARIA,
+                                ),
+                                ft.Text(
+                                    f"Nível {resumo['nivel_nome']} — concluído",
+                                    size=theme.TAMANHO_SUBTITULO,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                            ],
+                            spacing=8,
+                        ),
+                        ft.Divider(),
+                        ft.Text(
+                            f"Exercícios respondidos: {resumo['total_respondidos']}",
+                            size=theme.TAMANHO_TEXTO,
+                        ),
+                        ft.Text(
+                            f"Corretas: {resumo['corretas']}  ·  "
+                            f"Incorretas: {resumo['incorretas']}  ·  "
+                            f"Não avaliadas: {resumo['nao_avaliadas']}",
+                            size=theme.TAMANHO_TEXTO,
+                        ),
+                        ft.Divider(),
+                        ft.Text(
+                            f"Situação: {resumo['situacao']}",
+                            size=theme.TAMANHO_TEXTO,
+                            weight=ft.FontWeight.BOLD,
+                            color=theme.COR_SUCESSO,
+                        ),
+                        ft.Divider(),
+                        ft.Text(
+                            f"Próximo passo: {resumo['proximo_passo']}",
+                            size=theme.TAMANHO_TEXTO,
+                        ),
+                        ft.Text(
+                            "Os dados mostrados são informativos: a decisão de "
+                            "avançar de nível foi do motor pedagógico, com base "
+                            "no seu histórico de respostas.",
+                            size=theme.TAMANHO_LEGENDA,
+                            color=theme.COR_TEXTO_SECUNDARIO,
+                        ),
+                    ],
+                    spacing=6,
+                ),
+                padding=16,
+            ),
+            ft.FilledButton(
+                "Continuar para o próximo nível",
+                icon=ft.Icons.ARROW_FORWARD,
+                on_click=continuar,
+            ),
         ],
         scroll=ft.ScrollMode.AUTO,
         spacing=12,
