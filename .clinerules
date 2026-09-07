@@ -951,3 +951,58 @@ A arquitetura e as decisões do projeto são definidas externamente ao Cline.
 
 
 O Cline não deve executar automaticamente a suíte completa após cada pequena alteração. Durante o desenvolvimento, deve executar somente os testes diretamente relacionados à tarefa. A suíte completa será executada apenas como validação final, quando a implementação estiver concluída.
+
+REGRA — ESTRATÉGIA DE TESTES E USO EFICIENTE DE RECURSOS
+
+1. Durante o desenvolvimento de uma tarefa, executar prioritariamente apenas os testes diretamente relacionados aos arquivos e comportamentos alterados.
+
+2. Não executar a suíte completa repetidamente após cada pequena alteração.
+
+3. A suíte completa:
+   python -m pytest tests/ -v
+
+   deve ser executada somente como validação final da tarefa, após os testes específicos estarem passando.
+
+4. Exemplos:
+   - Alteração em fluxo_estudo.py:
+     python -m pytest tests/test_fluxo_estudo.py -v
+
+   - Alteração em painel_aluno.py:
+     python -m pytest tests/test_painel_aluno.py -v
+
+   - Alteração em painel_aluno_view.py:
+     python -m pytest tests/test_ui_painel.py -v
+
+   - Alteração envolvendo múltiplos módulos:
+     executar somente os arquivos de teste diretamente relacionados.
+
+5. Não criar testes apenas para aumentar artificialmente a quantidade de testes.
+   Cada teste deve proteger um comportamento relevante, uma regra de negócio, um fluxo crítico ou uma correção de bug.
+
+6. Correções de bugs devem preferencialmente receber um teste de regressão quando o comportamento puder ser reproduzido de forma automatizada.
+
+7. Alterações puramente visuais não exigem novos testes automatizados, salvo quando alterarem comportamento, navegação, estado ou lógica.
+
+8. Não aumentar timeouts de testes sem investigar primeiro a causa da lentidão.
+
+9. Se um teste ficar significativamente lento, investigar:
+   - consultas desnecessárias ao banco;
+   - criação excessiva de dados;
+   - loops;
+   - espera artificial;
+   - abertura de aplicação/janela;
+   - operações repetidas.
+
+10. Testes de UI/Flet devem ser usados somente quando realmente protegerem um comportamento importante. Não criar testes redundantes para cada elemento visual.
+
+11. Antes da validação final, executar:
+    python -m pytest tests/ -v
+
+12. O relatório final deve informar:
+    - testes específicos executados durante o desenvolvimento;
+    - suíte completa executada na validação final;
+    - quantidade total de testes;
+    - tempo aproximado;
+    - falhas ou avisos relevantes.
+
+13. Não remover testes existentes apenas para reduzir o tempo de execução. Se houver necessidade de otimização da suíte, propor a alteração ao arquiteto antes de implementá-la.
