@@ -14,6 +14,7 @@ from app.models.avaliacao import (
     Avaliacao,
 )
 from app.models.exercicio import (
+    TIPO_COMPLETAR_CODIGO,
     TIPO_ESCREVER_CODIGO,
     TIPO_PADRAO,
     TIPO_PREVER_RESULTADO,
@@ -41,6 +42,7 @@ __all__ = [
     "TIPO_RESPOSTA_TEXTUAL",
     "TIPO_ESCREVER_CODIGO",
     "TIPO_PREVER_RESULTADO",
+    "TIPO_COMPLETAR_CODIGO",
     "TIPOS_DE_EXERCICIO",
     "TIPO_PADRAO",
     # Avaliação de respostas (Tarefa 06) — valores centralizados.

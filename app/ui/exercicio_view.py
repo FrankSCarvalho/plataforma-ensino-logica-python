@@ -20,11 +20,11 @@ A tela NUNCA executa código do aluno e nunca decide pedagogia.
 import flet as ft
 
 from app.models import (
-    RESULTADO_CORRETA,
-    RESULTADO_INCORRETA,
-    RESULTADO_PARCIALMENTE_CORRETA,
+    TIPO_COMPLETAR_CODIGO,
     TIPO_ESCREVER_CODIGO,
     TIPO_PREVER_RESULTADO,
+    TIPO_RESPOSTA_TEXTUAL,
+    Exercicio,
 )
 from app.services import fluxo_estudo
 from app.ui.components import theme
@@ -37,8 +37,11 @@ _DICA_POR_TIPO = {
         "quando houver mais de uma."
     ),
     TIPO_ESCREVER_CODIGO: (
-        "Escreva o código solicitado. Ele não é executado pelo "
-        "aplicativo; a correção automática será implantada no futuro."
+        "Escreva o código solicitado."
+    ),
+    TIPO_COMPLETAR_CODIGO: (
+        "Preencha a lacuna do código. Escreva somente o que deve ocupar "
+        "o espaço indicado."
     ),
 }
 

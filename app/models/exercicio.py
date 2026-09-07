@@ -9,18 +9,19 @@ from dataclasses import dataclass
 #
 # A coluna ``tipo`` da tabela ``exercicios`` armazena um destes rótulos,
 # tornando a entidade extensível: novos tipos podem ser acrescentados
-# futuramente sem alterar o schema. Nesta etapa os rótulos apenas
-# descrevem a intenção do exercício — nenhuma lógica de correção existe.
+# futuramente sem alterar o schema.
 # ---------------------------------------------------------------------------
 TIPO_RESPOSTA_TEXTUAL = "resposta_textual"   # aluno escreve uma resposta livre
 TIPO_ESCREVER_CODIGO = "escrever_codigo"     # aluno escreve um pequeno código
 TIPO_PREVER_RESULTADO = "prever_resultado"   # aluno prevê a saída de um trecho
+TIPO_COMPLETAR_CODIGO = "completar_codigo"   # aluno completa uma lacuna no código
 
 # Rótulos conhecidos (usados para validação futura e documentação).
 TIPOS_DE_EXERCICIO = (
     TIPO_RESPOSTA_TEXTUAL,
     TIPO_ESCREVER_CODIGO,
     TIPO_PREVER_RESULTADO,
+    TIPO_COMPLETAR_CODIGO,
 )
 
 # Tipo padrão atribuído a novos exercícios.
@@ -32,9 +33,8 @@ class Exercicio:
     """Entidade Exercício, persistida na tabela ``exercicios``.
 
     Representa uma unidade de prática vinculada a um nível. Contém o
-    enunciado, a ordenação dentro do nível e o ``tipo``, que prepara a
-    entidade para os diferentes formatos de exercício que serão
-    implementados em tarefas futuras (correção, respostas esperadas etc.).
+    enunciado, a ordenação dentro do nível e o ``tipo``, que permite
+    diferentes formatos de exercício.
     """
 
     nivel_id: int
@@ -43,11 +43,9 @@ class Exercicio:
     ativo: int = 1
     # Rótulo do tipo de exercício (extensível; ver TIPOS_DE_EXERCICIO).
     tipo: str = TIPO_PADRAO
-    # Resposta esperada usada APENAS pela correção automática do tipo
-    # ``prever_resultado`` (Tarefa 06). Vazio significa "sem resposta
-    # esperada cadastrada" — nesses casos o avaliador retorna
-    # ``nao_avaliada``. O campo é preenchido pelo currículo/seed; o aluno
-    # nunca o vê.
+    # Resposta esperada usada pela correção automática quando o tipo
+    # possuir uma resposta cadastrada. O campo é preenchido pelo
+    # currículo/seed; o aluno nunca o vê.
     resposta_esperada: str = ""
     id: int | None = None
 

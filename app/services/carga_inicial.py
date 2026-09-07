@@ -28,12 +28,15 @@ nem materiais de terceiros.
 from __future__ import annotations
 
 from app.models import (
+    TIPO_COMPLETAR_CODIGO,
+    TIPO_ESCREVER_CODIGO,
     TIPO_PREVER_RESULTADO,
     Exercicio,
     Habilidade,
     Modulo,
     Nivel,
 )
+
 from app.repositories import (
     ExercicioRepository,
     HabilidadeRepository,
@@ -114,40 +117,34 @@ NIVEL_1: dict = {
     "exercicios": [
         {
             "enunciado": (
-                "Considere as instruções:\n"
-                "    escreva(\"Bola\")\n"
-                "    escreva(\"Chuteira\")\n"
-                "Qual texto aparece PRIMEIRO na tela? Escreva apenas "
-                "esse texto."
+                "Complete a lacuna para que o programa mostre "
+                "\"Bola\" na tela:\n\n"
+                "    escreva(______)\n"
             ),
             "ordem": 1,
-            "tipo": "prever_resultado",
-            # Resposta esperada para a correção automática (Tarefa 06).
-            "resposta_esperada": "Bola",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": '"Bola"',
         },
         {
             "enunciado": (
-                "Considere as instruções:\n"
-                "    escreva(\"um\")\n"
-                "    escreva(\"dois\")\n"
-                "    escreva(\"tres\")\n"
-                "Qual texto aparece POR ÚLTIMO na tela? Escreva apenas "
-                "esse texto."
+                "Complete a lacuna para que o programa mostre "
+                "\"Chuteira\" na tela:\n\n"
+                "    escreva(______)\n"
             ),
             "ordem": 2,
-            "tipo": "prever_resultado",
-            "resposta_esperada": "tres",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": '"Chuteira"',
         },
         {
             "enunciado": (
-                "Um programa tem as instruções:\n"
+                "Complete a lacuna para que o programa mostre primeiro "
+                "\"Inicio\" e depois \"Fim\":\n\n"
                 "    escreva(\"Inicio\")\n"
-                "    escreva(\"Fim\")\n"
-                "Reescreva as duas instruções trocando a ordem delas, de "
-                "modo que a palavra Fim apareça ANTES da palavra Inicio."
+                "    ______\n"
             ),
             "ordem": 3,
-            "tipo": "resposta_textual",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": 'escreva("Fim")',
         },
     ],
 }
@@ -190,43 +187,44 @@ NIVEL_2: dict = {
     "exercicios": [
         {
             "enunciado": (
-                "Considere as instruções:\n"
+                "Complete a lacuna para que a saída seja:\n"
+                "    cafe\n"
+                "    pao\n"
+                "    leite\n\n"
+                "Código:\n"
                 "    escreva(\"cafe\")\n"
-                "    escreva(\"pao\")\n"
+                "    escreva(______)\n"
                 "    escreva(\"leite\")\n"
-                "Escreva a saída completa do programa, na ordem em que os "
-                "textos aparecem, um por linha."
             ),
             "ordem": 1,
-            "tipo": "prever_resultado",
-            # Resposta com múltiplas linhas: a coluna TEXT (migração v5)
-            # suporta respostas longas sem problema.
-            "resposta_esperada": "cafe\npao\nleite",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": '"pao"',
         },
         {
             "enunciado": (
-                "Considere as instruções:\n"
+                "Complete a lacuna para que a palavra \"Oi\" apareça "
+                "duas vezes:\n\n"
                 "    escreva(\"Oi\")\n"
-                "    escreva(\"Oi\")\n"
-                "Quantas vezes a palavra Oi aparece na tela? Escreva "
-                "apenas o número."
+                "    ______\n"
             ),
             "ordem": 2,
-            "tipo": "prever_resultado",
-            "resposta_esperada": "2",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": 'escreva("Oi")',
         },
         {
             "enunciado": (
-                "Considere as instruções:\n"
+                "Complete a lacuna para que a saída seja, nesta ordem:\n"
+                "    um\n"
+                "    dois\n"
+                "    tres\n\n"
+                "Código:\n"
                 "    escreva(\"um\")\n"
-                "    escreva(\"dois\")\n"
+                "    escreva(______)\n"
                 "    escreva(\"tres\")\n"
-                "Qual é a SEGUNDA linha da saída do programa? Escreva "
-                "apenas esse texto."
             ),
             "ordem": 3,
-            "tipo": "prever_resultado",
-            "resposta_esperada": "dois",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": '"dois"',
         },
     ],
 }
@@ -266,40 +264,46 @@ NIVEL_3: dict = {
     "exercicios": [
         {
             "enunciado": (
-                "Escreva as instruções necessárias para exibir na tela, "
-                "nesta ordem:\n"
+                "Complete a lacuna para que o programa produza:\n"
                 "    verde\n"
                 "    amarelo\n"
-                "    azul\n"
-                "Escreva uma instrução escreva(\"...\") por linha."
+                "    azul\n\n"
+                "Código:\n"
+                "    escreva(\"verde\")\n"
+                "    ______\n"
+                "    escreva(\"azul\")\n"
             ),
             "ordem": 1,
-            "tipo": "escrever_codigo",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": 'escreva("amarelo")',
         },
         {
             "enunciado": (
-                "Escreva as instruções necessárias para exibir na tela, "
-                "nesta ordem:\n"
+                "Complete a lacuna para que a saída seja:\n"
                 "    tres\n"
                 "    dois\n"
-                "    um\n"
-                "Preste atenção: a ordem pedida é a INVERSA da contagem "
-                "normal."
+                "    um\n\n"
+                "Código:\n"
+                "    escreva(\"tres\")\n"
+                "    escreva(______)\n"
+                "    escreva(\"um\")\n"
             ),
             "ordem": 2,
-            "tipo": "escrever_codigo",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": '"dois"',
         },
         {
             "enunciado": (
-                "Um programa já tem a instrução:\n"
-                "    escreva(\"Bom dia!\")\n"
-                "Acrescente (escreva abaixo dela) as instruções "
-                "necessárias para que a saída completa seja:\n"
+                "Complete a lacuna para que a saída seja:\n"
                 "    Bom dia!\n"
-                "    Boa noite!"
+                "    Boa noite!\n\n"
+                "Código:\n"
+                "    escreva(\"Bom dia!\")\n"
+                "    ______\n"
             ),
             "ordem": 3,
-            "tipo": "escrever_codigo",
+            "tipo": TIPO_COMPLETAR_CODIGO,
+            "resposta_esperada": 'escreva("Boa noite!")',
         },
     ],
 }
@@ -444,7 +448,10 @@ def carregar_curriculo_inicial() -> dict:
                 )
                 resumo["exercicios_criados"] += 1
             elif (
-                exercicio_existente.tipo == TIPO_PREVER_RESULTADO
+                exercicio_existente.tipo in (
+                TIPO_PREVER_RESULTADO,
+                TIPO_COMPLETAR_CODIGO,
+                )
                 and not exercicio_existente.resposta_esperada
                 and resposta_esperada_definida
             ):
