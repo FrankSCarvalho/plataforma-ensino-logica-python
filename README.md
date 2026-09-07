@@ -31,10 +31,10 @@ O prefixo `(.venv)` deve aparecer no início do prompt, indicando que o ambiente
 
 ## Instalação das dependências
 
-Com o ambiente virtual ativo, instale o projeto em modo editável junto com as dependências de desenvolvimento:
+Com o ambiente virtual ativo, instale o projeto em modo editável:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .
 ```
 
 ## Execução do aplicativo
@@ -46,14 +46,3 @@ python main.py
 ```
 
 Deve abrir uma janela com "Plataforma de Ensino de Lógica".
-
-## Execução dos testes
-
-Com o ambiente virtual ativo, a partir da raiz do projeto:
-
-```bash
-python -m pytest
-```
-
-- verifica a inicialização da infraestrutura do banco SQLite;
-- verifica que os módulos principais da aplicação importam sem erro.

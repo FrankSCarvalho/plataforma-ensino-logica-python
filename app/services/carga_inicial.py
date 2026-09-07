@@ -446,10 +446,7 @@ def carregar_curriculo_inicial() -> dict:
                 )
                 resumo["exercicios_criados"] += 1
             elif (
-                exercicio_existente.tipo in (
-                TIPO_PREVER_RESULTADO,
-                TIPO_COMPLETAR_CODIGO,
-                )
+                exercicio_existente.tipo == TIPO_COMPLETAR_CODIGO
                 and not exercicio_existente.resposta_esperada
                 and resposta_esperada_definida
             ):
