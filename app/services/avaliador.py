@@ -11,10 +11,7 @@ O código enviado pelo aluno nunca é executado.
 """
 
 from app.models import (
-    TIPO_COMPLETAR_CODIGO,
-    TIPO_ESCREVER_CODIGO,
-    TIPO_PREVER_RESULTADO,
-    TIPO_RESPOSTA_TEXTUAL,
+    TIPO_COMPLETAR_CODIGO,    
     Exercicio,
 )
 from app.models.avaliacao import (
@@ -89,26 +86,10 @@ def avaliar_resposta(exercicio: Exercicio, resposta: str) -> Avaliacao:
     O código enviado pelo aluno nunca é executado.
     """
 
-    if exercicio.tipo == TIPO_PREVER_RESULTADO:
-        return _comparar_resposta_esperada(exercicio, resposta)
-
     if exercicio.tipo == TIPO_COMPLETAR_CODIGO:
         return _comparar_resposta_esperada(exercicio, resposta)
 
-    if exercicio.tipo == TIPO_RESPOSTA_TEXTUAL:
-        return Avaliacao(
-            resultado=RESULTADO_NAO_AVALIADA,
-            feedback="Tipo de exercício sem avaliação automática.",
-            detalhes={"motivo": "tipo_resposta_textual"},
-        )
-
-    if exercicio.tipo == TIPO_ESCREVER_CODIGO:
-        return Avaliacao(
-            resultado=RESULTADO_NAO_AVALIADA,
-            feedback="Tipo de exercício sem avaliação automática.",
-            detalhes={"motivo": "tipo_escrever_codigo"},
-        )
-
+    
     return Avaliacao(
         resultado=RESULTADO_NAO_AVALIADA,
         feedback="Tipo de exercício sem avaliação automática definida.",

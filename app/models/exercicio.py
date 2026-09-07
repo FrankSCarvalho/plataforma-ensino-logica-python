@@ -11,21 +11,17 @@ from dataclasses import dataclass
 # tornando a entidade extensível: novos tipos podem ser acrescentados
 # futuramente sem alterar o schema.
 # ---------------------------------------------------------------------------
-TIPO_RESPOSTA_TEXTUAL = "resposta_textual"   # aluno escreve uma resposta livre
-TIPO_ESCREVER_CODIGO = "escrever_codigo"     # aluno escreve um pequeno código
-TIPO_PREVER_RESULTADO = "prever_resultado"   # aluno prevê a saída de um trecho
+
+
 TIPO_COMPLETAR_CODIGO = "completar_codigo"   # aluno completa uma lacuna no código
 
 # Rótulos conhecidos (usados para validação futura e documentação).
-TIPOS_DE_EXERCICIO = (
-    TIPO_RESPOSTA_TEXTUAL,
-    TIPO_ESCREVER_CODIGO,
-    TIPO_PREVER_RESULTADO,
+TIPOS_DE_EXERCICIO = (    
     TIPO_COMPLETAR_CODIGO,
 )
 
 # Tipo padrão atribuído a novos exercícios.
-TIPO_PADRAO = TIPO_RESPOSTA_TEXTUAL
+TIPO_PADRAO = TIPO_COMPLETAR_CODIGO
 
 
 @dataclass
