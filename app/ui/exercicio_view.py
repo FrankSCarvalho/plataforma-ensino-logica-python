@@ -24,6 +24,9 @@ from app.models import (
     TIPO_ESCREVER_CODIGO,
     TIPO_PREVER_RESULTADO,
     TIPO_RESPOSTA_TEXTUAL,
+    RESULTADO_CORRETA,
+    RESULTADO_INCORRETA,
+    RESULTADO_PARCIALMENTE_CORRETA,
     Exercicio,
 )
 from app.services import fluxo_estudo
