@@ -29,8 +29,6 @@ from __future__ import annotations
 
 from app.models import (
     TIPO_COMPLETAR_CODIGO,
-    TIPO_ESCREVER_CODIGO,
-    TIPO_PREVER_RESULTADO,
     Exercicio,
     Habilidade,
     Modulo,
