@@ -187,6 +187,22 @@ MIGRACAO_5 = [
     "ALTER TABLE exercicios ADD COLUMN resposta_esperada TEXT NOT NULL DEFAULT ''",
 ]
 
+# ---------------------------------------------------------------------------
+# Versão 6 — código apresentado ao aluno (Tarefa 07)
+# ---------------------------------------------------------------------------
+# Adiciona a coluna ``codigo`` à tabela ``exercicios``: contém o código que
+# se apresenta ao aluno para que ele complete a lacuna (``______``). Esta
+# coluna passa a ser a fonte principal do código exibido pela UI; o campo
+# ``enunciado`` continua existendo como texto descritivo (alteração não
+# destrutiva, sem remoção de colunas).
+#
+# ALTER TABLE ADD COLUMN preserva todos os dados existentes. O DEFAULT ''
+# mantém os registros já gravados válidos: exercícios de bancos antigos
+# não exibem a nova coluna até que a carga inicial a preencha.
+MIGRACAO_6 = [
+    "ALTER TABLE exercicios ADD COLUMN codigo TEXT NOT NULL DEFAULT ''",
+]
+
 # Mapa de migrações na ordem de aplicação. A chave é o número da versão.
 MIGRACOES = {
     1: MIGRACAO_1,
@@ -194,4 +210,5 @@ MIGRACOES = {
     3: MIGRACAO_3,
     4: MIGRACAO_4,
     5: MIGRACAO_5,
+    6: MIGRACAO_6,
 }

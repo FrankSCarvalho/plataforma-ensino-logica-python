@@ -2,7 +2,8 @@
 
 Responsabilidades desta tela (APENAS apresentação):
 
-    * exibir o enunciado do exercício corrente (vindo do banco);
+    * exibir o código apresentado ao aluno (campo ``codigo``, migração v6)
+      e o texto descritivo do enunciado;
     * coletar a resposta do aluno para o exercício de completar lacunas;
     * enviar a resposta AO SERVIÇO ``fluxo_estudo.responder``, que aciona
       avaliador -> tentativa -> motor pedagógico (nenhuma regra aqui);
@@ -131,12 +132,34 @@ def _cabecalho(app, estado) -> ft.Column:
 def _build_exercicio(app, estado, exercicio) -> ft.Control:
     """Tela do exercício corrente com envio e resultado."""
     # ---- Enunciado ------------------------------------------------------
+    # Texto descritivo do exercício. Desde a migração v6, o código que se
+    # apresenta ao aluno vem de ``codigo`` (bloco seguinte); este cartão
+    # continua exibindo o ``enunciado`` enquanto a entidade preserva o
+    # campo por compatibilidade (alteração não destrutiva).
     enunciado = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 [
                     ft.Text("Enunciado", size=13, color=ft.Colors.GREY_700),
                     ft.Text(exercicio.enunciado, size=16, selectable=True),
+                ],
+                spacing=4,
+            ),
+            padding=14,
+        )
+    )
+
+    # ---- Código apresentado ao aluno ------------------------------------
+    # Coluna ``codigo`` (migração v6): código que o aluno deve completar.
+    # Para exercícios de bancos anteriores à retrocompatibilidade da carga
+    # inicial, recorre ao ``enunciado`` (não deixa o bloco vazio).
+    codigo_presentado = exercicio.codigo or exercicio.enunciado
+    cartao_codigo = ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("Código", size=13, color=ft.Colors.GREY_700),
+                    ft.Text(codigo_presentado, size=16, selectable=True),
                 ],
                 spacing=4,
             ),
@@ -278,6 +301,7 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
         [
             _cabecalho(app, estado),
             enunciado,
+            cartao_codigo,
             campo_resposta,
             area_resultado,
             acoes,

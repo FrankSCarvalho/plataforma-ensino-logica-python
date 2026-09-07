@@ -119,6 +119,7 @@ NIVEL_1: dict = {
                 "\"Bola\" na tela:\n\n"
                 "    escreva(______)\n"
             ),
+            "codigo": "    escreva(______)",
             "ordem": 1,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": '"Bola"',
@@ -129,6 +130,7 @@ NIVEL_1: dict = {
                 "\"Chuteira\" na tela:\n\n"
                 "    escreva(______)\n"
             ),
+            "codigo": "    escreva(______)",
             "ordem": 2,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": '"Chuteira"',
@@ -140,6 +142,7 @@ NIVEL_1: dict = {
                 "    escreva(\"Inicio\")\n"
                 "    ______\n"
             ),
+            "codigo": "    escreva(\"Inicio\")\n    ______",
             "ordem": 3,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": 'escreva("Fim")',
@@ -194,6 +197,11 @@ NIVEL_2: dict = {
                 "    escreva(______)\n"
                 "    escreva(\"leite\")\n"
             ),
+            "codigo": (
+                "    escreva(\"cafe\")\n"
+                "    escreva(______)\n"
+                "    escreva(\"leite\")"
+            ),
             "ordem": 1,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": '"pao"',
@@ -205,6 +213,7 @@ NIVEL_2: dict = {
                 "    escreva(\"Oi\")\n"
                 "    ______\n"
             ),
+            "codigo": "    escreva(\"Oi\")\n    ______",
             "ordem": 2,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": 'escreva("Oi")',
@@ -219,6 +228,11 @@ NIVEL_2: dict = {
                 "    escreva(\"um\")\n"
                 "    escreva(______)\n"
                 "    escreva(\"tres\")\n"
+            ),
+            "codigo": (
+                "    escreva(\"um\")\n"
+                "    escreva(______)\n"
+                "    escreva(\"tres\")"
             ),
             "ordem": 3,
             "tipo": TIPO_COMPLETAR_CODIGO,
@@ -271,6 +285,11 @@ NIVEL_3: dict = {
                 "    ______\n"
                 "    escreva(\"azul\")\n"
             ),
+            "codigo": (
+                "    escreva(\"verde\")\n"
+                "    ______\n"
+                "    escreva(\"azul\")"
+            ),
             "ordem": 1,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": 'escreva("amarelo")',
@@ -286,6 +305,11 @@ NIVEL_3: dict = {
                 "    escreva(______)\n"
                 "    escreva(\"um\")\n"
             ),
+            "codigo": (
+                "    escreva(\"tres\")\n"
+                "    escreva(______)\n"
+                "    escreva(\"um\")"
+            ),
             "ordem": 2,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": '"dois"',
@@ -299,6 +323,7 @@ NIVEL_3: dict = {
                 "    escreva(\"Bom dia!\")\n"
                 "    ______\n"
             ),
+            "codigo": "    escreva(\"Bom dia!\")\n    ______",
             "ordem": 3,
             "tipo": TIPO_COMPLETAR_CODIGO,
             "resposta_esperada": 'escreva("Boa noite!")',
@@ -326,6 +351,8 @@ def carregar_curriculo_inicial() -> dict:
             "habilidade_criada": bool,
             "niveis_criados": int,
             "exercicios_criados": int,
+            "respostas_esperadas_preenchidas": int,
+            "codigos_preenchidos": int,
         }
     """
     repositorio_modulos = ModuloRepository()
@@ -341,6 +368,9 @@ def carregar_curriculo_inicial() -> dict:
         # Quantidade de exercícios já gravados que receberam a resposta
         # esperada nesta execução (retrocompatibilidade com a migração v5).
         "respostas_esperadas_preenchidas": 0,
+        # Quantidade de exercícios já gravados que receberam o código
+        # nesta execução (retrocompatibilidade com a migração v6).
+        "codigos_preenchidos": 0,
     }
 
     # ---- Módulo ------------------------------------------------------
@@ -425,6 +455,9 @@ def carregar_curriculo_inicial() -> dict:
             resposta_esperada_definida = definicao_exercicio.get(
                 "resposta_esperada", ""
             )
+            # Código apresentado ao aluno (migração v6); vazio quando a
+            # definição ainda não o possui (exercícios de bancos antigos).
+            codigo_definido = definicao_exercicio.get("codigo", "")
             exercicio_existente = next(
                 (
                     e
@@ -442,25 +475,35 @@ def carregar_curriculo_inicial() -> dict:
                         ordem=definicao_exercicio["ordem"],
                         tipo=definicao_exercicio["tipo"],
                         resposta_esperada=resposta_esperada_definida,
+                        codigo=codigo_definido,
                     )
                 )
                 resumo["exercicios_criados"] += 1
-            elif (
-                exercicio_existente.tipo == TIPO_COMPLETAR_CODIGO
-                and not exercicio_existente.resposta_esperada
-                and resposta_esperada_definida
-            ):
-                # Retrocompatibilidade (Tarefa 06): exercícios gravados
-                # antes da migração v5 não têm resposta esperada. Preenche
-                # o campo UMA única vez — nas execuções seguintes o campo
-                # já está preenchido e nada é alterado (idempotência). O
-                # enunciado, a ordem e o conteúdo pedagógico já gravados
-                # NÃO são modificados.
-                exercicio_existente.resposta_esperada = (
-                    resposta_esperada_definida
+            elif exercicio_existente.tipo == TIPO_COMPLETAR_CODIGO and (
+                (
+                    not exercicio_existente.resposta_esperada
+                    and resposta_esperada_definida
                 )
+                or (not exercicio_existente.codigo and codigo_definido)
+            ):
+                # Retrocompatibilidade (Tarefas 06 e 07): exercícios
+                # gravados antes das migrações v5/v6 não têm resposta
+                # esperada nem código próprio. Preenche os campos UMA
+                # única vez — nas execuções seguintes já estão preenchidos
+                # e nada é alterado (idempotência). O enunciado, a ordem e
+                # o conteúdo pedagógico já gravados NÃO são modificados.
+                if (
+                    not exercicio_existente.resposta_esperada
+                    and resposta_esperada_definida
+                ):
+                    exercicio_existente.resposta_esperada = (
+                        resposta_esperada_definida
+                    )
+                    resumo["respostas_esperadas_preenchidas"] += 1
+                if not exercicio_existente.codigo and codigo_definido:
+                    exercicio_existente.codigo = codigo_definido
+                    resumo["codigos_preenchidos"] += 1
                 repositorio_exercicios.atualizar(exercicio_existente)
-                resumo["respostas_esperadas_preenchidas"] += 1
 
     return resumo
 
@@ -483,3 +526,5 @@ if __name__ == "__main__":
           f"{resultado['exercicios_criados']}")
     print("  Respostas esperadas preenchidas (retrocompatibilidade): "
           f"{resultado['respostas_esperadas_preenchidas']}")
+    print("  Códigos preenchidos (retrocompatibilidade): "
+          f"{resultado['codigos_preenchidos']}")

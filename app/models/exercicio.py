@@ -43,6 +43,11 @@ class Exercicio:
     # possuir uma resposta cadastrada. O campo é preenchido pelo
     # currículo/seed; o aluno nunca o vê.
     resposta_esperada: str = ""
+    # Código apresentado ao aluno (migração v6). Contém o código com a
+    # lacuna ``______`` que o aluno deve completar; é a fonte principal do
+    # código exibido pela UI. Permanece vazio em bancos anteriores à
+    # retrocompatibilidade da carga inicial até que esta o preencha.
+    codigo: str = ""
     id: int | None = None
 
     @classmethod
@@ -56,4 +61,5 @@ class Exercicio:
             ativo=linha["ativo"],
             tipo=linha["tipo"],
             resposta_esperada=linha["resposta_esperada"],
+            codigo=linha["codigo"],
         )
