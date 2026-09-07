@@ -15,10 +15,7 @@ from app.models.avaliacao import (
 )
 from app.models.exercicio import (
     TIPO_COMPLETAR_CODIGO,
-    TIPO_ESCREVER_CODIGO,
     TIPO_PADRAO,
-    TIPO_PREVER_RESULTADO,
-    TIPO_RESPOSTA_TEXTUAL,
     TIPOS_DE_EXERCICIO,
     Exercicio,
 )
@@ -38,14 +35,13 @@ __all__ = [
     "ProgressoAluno",
     "SessaoEstudo",
     "Tentativa",
-    # Constantes de tipos de exercício (Tarefa 05).
-    "TIPO_RESPOSTA_TEXTUAL",
-    "TIPO_ESCREVER_CODIGO",
-    "TIPO_PREVER_RESULTADO",
+
+    # Único tipo de exercício atualmente suportado.
     "TIPO_COMPLETAR_CODIGO",
     "TIPOS_DE_EXERCICIO",
     "TIPO_PADRAO",
-    # Avaliação de respostas (Tarefa 06) — valores centralizados.
+
+    # Resultados possíveis da avaliação.
     "Avaliacao",
     "RESULTADO_CORRETA",
     "RESULTADO_INCORRETA",

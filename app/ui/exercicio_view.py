@@ -3,8 +3,7 @@
 Responsabilidades desta tela (APENAS apresentação):
 
     * exibir o enunciado do exercício corrente (vindo do banco);
-    * coletar a resposta do aluno (campo multilinha para código e
-      previsões de saída);
+    * coletar a resposta do aluno para o exercício de completar lacunas;
     * enviar a resposta AO SERVIÇO ``fluxo_estudo.responder``, que aciona
       avaliador -> tentativa -> motor pedagógico (nenhuma regra aqui);
     * mostrar o resultado, a mensagem de progressão (quando houver) e o
@@ -21,27 +20,21 @@ import flet as ft
 
 from app.models import (
     TIPO_COMPLETAR_CODIGO,
-    TIPO_ESCREVER_CODIGO,
-    TIPO_PREVER_RESULTADO,
-    TIPO_RESPOSTA_TEXTUAL,
     RESULTADO_CORRETA,
     RESULTADO_INCORRETA,
     RESULTADO_PARCIALMENTE_CORRETA,
     Exercicio,
 )
+
 from app.services import fluxo_estudo
 from app.ui.components import theme
 
-# Rótulos amigáveis por tipo de exercício (a dica orienta o formato da
-# resposta; a correção continua sendo responsabilidade do avaliador).
+# A plataforma trabalha atualmente com um único formato de exercício:
+# completar_codigo.
+#
+# A dica orienta o aluno sobre o que deve ser enviado, mas a avaliação
+# continua sendo responsabilidade do serviço avaliador.
 _DICA_POR_TIPO = {
-    TIPO_PREVER_RESULTADO: (
-        "Escreva a saída que o programa produz. Use uma linha por saída "
-        "quando houver mais de uma."
-    ),
-    TIPO_ESCREVER_CODIGO: (
-        "Escreva o código solicitado."
-    ),
     TIPO_COMPLETAR_CODIGO: (
         "Preencha a lacuna do código. Escreva somente o que deve ocupar "
         "o espaço indicado."
@@ -152,7 +145,8 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
     )
     dica = _DICA_POR_TIPO.get(exercicio.tipo)
 
-    # ---- Campo de resposta (multilinha: serve para todos os tipos) -----
+    # ---- Campo de resposta ---------------------------------------------
+    # O aluno informa somente o conteúdo que deve preencher a lacuna.
     campo_resposta = ft.TextField(
         label="Sua resposta",
         hint_text=dica or "Digite sua resposta",
