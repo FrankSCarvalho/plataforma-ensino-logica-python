@@ -146,6 +146,13 @@ def build(app) -> ft.Control:
     elementos.append(ft.Divider())
     elementos.append(
         ft.OutlinedButton(
+            "Voltar ao painel",
+            icon=ft.Icons.DASHBOARD,
+            on_click=lambda evento: app.mostrar_painel(),
+        )
+    )
+    elementos.append(
+        ft.OutlinedButton(
             "Trocar aluno",
             icon=ft.Icons.ARROW_BACK,
             on_click=lambda evento: app.mostrar_selecao_aluno(),

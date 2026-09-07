@@ -18,6 +18,8 @@ MODULOS_PRINCIPAIS = [
     "app.ui.habilidade_view",
     "app.ui.nivel_view",
     "app.ui.exercicio_view",
+    # Painel do Aluno (Tarefa 11).
+    "app.ui.painel_aluno_view",
     # Tema e componentes reutilizáveis (Tarefa 09).
     "app.ui.components",
     "app.ui.components.theme",
@@ -52,6 +54,8 @@ MODULOS_PRINCIPAIS = [
     "app.services.motor_pedagogico",
     # Fluxo de estudo (Tarefa 08) — orquestração usada pela UI.
     "app.services.fluxo_estudo",
+    # Painel do Aluno (Tarefa 11) — visão geral do progresso.
+    "app.services.painel_aluno",
 ]
 
 

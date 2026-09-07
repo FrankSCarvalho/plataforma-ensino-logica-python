@@ -109,11 +109,11 @@ def build(app) -> ft.Control:
 
 
 def _selecionar(app, aluno) -> None:
-    """Guarda o aluno escolhido no estado e avança para as habilidades.
+    """Guarda o aluno escolhido no estado e avança para o painel do aluno.
 
     Ao trocar de aluno, o estado de estudo anterior (progresso, exercícios
-    e sessão) é limpado para que nenhum dado de um aluno apareça na lista
-    de outro. A limpeza é feita pela aplicação (``main_view``).
+    e sessão) é limpado para que nenhum dado de um aluno apareça no
+    painel de outro. A limpeza é feita pela aplicação (``main_view``).
     """
     app.aluno = aluno
-    app.mostrar_habilidades()
+    app.mostrar_painel()

@@ -1,0 +1,18 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0 -- c:\Projetos_Github\plataforma-ensino-logica-python\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: c:\Projetos_Github\plataforma-ensino-logica-python
+configfile: pyproject.toml
+plugins: anyio-4.15.1, flet-0.86.5
+collecting ... collected 16 items
+
+tests/test_painel_aluno.py::test_aluno_sem_progresso_todas_nao_iniciadas PASSED [  6%]
+tests/test_painel_aluno.py::test_aluno_sem_progresso_proximo_passo_inicia PASSED [ 12%]
+tests/test_painel_aluno.py::test_aluno_sem_progresso_nivel_texto_padrao PASSED [ 18%]
+tests/test_painel_aluno.py::test_aluno_com_habilidade_em_andamento PASSED [ 25%]
+tests/test_painel_aluno.py::test_habilidade_em_andamento_mostra_nivel_atual PASSED [ 31%]
+tests/test_painel_aluno.py::test_habilidade_em_andamento_proximo_passo_continua PASSED [ 37%]
+tests/test_painel_aluno.py::test_aluno_com_habilidade_concluida PASSED   [ 43%]
+tests/test_painel_aluno.py::test_habilidade_concluida_apos_ultimo_nivel PASSED [ 50%]
+tests/test_painel_aluno.py::test_habilidades_mistas_com_habilidade_extra PASSED [ 56%]
+tests/test_painel_aluno.py::test_todas_habilidades_concluidas 

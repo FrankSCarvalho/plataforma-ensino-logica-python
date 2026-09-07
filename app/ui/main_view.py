@@ -28,7 +28,7 @@ import traceback
 import flet as ft
 
 from app.services import fluxo_estudo
-from app.ui import aluno_view, exercicio_view, habilidade_view, nivel_view
+from app.ui import aluno_view, exercicio_view, habilidade_view, nivel_view, painel_aluno_view
 
 
 class AplicacaoUI:
@@ -89,6 +89,14 @@ class AplicacaoUI:
         """Tela 1: seleção/cadastro simples do aluno."""
         self._limpar_estado()
         self.navegar(aluno_view.build(self))
+
+    def mostrar_painel(self) -> None:
+        """Tela do Painel do Aluno (Tarefa 11): visão geral do progresso."""
+        if self.aluno is None:
+            self.mostrar_selecao_aluno()
+            return
+        self._limpar_estado()
+        self.navegar(painel_aluno_view.build(self))
 
     def mostrar_habilidades(self) -> None:
         """Tela 2: lista de habilidades com o progresso do aluno."""

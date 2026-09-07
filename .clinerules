@@ -948,3 +948,6 @@ NÃO INVENTE O QUE NÃO FOI SOLICITADO.
 O Cline escreve o código.
 
 A arquitetura e as decisões do projeto são definidas externamente ao Cline.
+
+
+O Cline não deve executar automaticamente a suíte completa após cada pequena alteração. Durante o desenvolvimento, deve executar somente os testes diretamente relacionados à tarefa. A suíte completa será executada apenas como validação final, quando a implementação estiver concluída.
