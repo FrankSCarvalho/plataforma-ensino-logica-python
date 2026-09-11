@@ -153,15 +153,44 @@ def _build_exercicio(app, estado, exercicio) -> ft.Control:
     # Coluna ``codigo`` (migração v6): código que o aluno deve completar.
     # Para exercícios de bancos anteriores à retrocompatibilidade da carga
     # inicial, recorre ao ``enunciado`` (não deixa o bloco vazio).
+    #
+    # O bloco é tratado como código: fonte monoespaçada, fundo destacado e
+    # borda que o distingue do texto comum. Preserva os saltos de linha e
+    # a indentação (sem espaciados colapsados) e permite seleção/cópia.
     codigo_presentado = exercicio.codigo or exercicio.enunciado
     cartao_codigo = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("Código", size=13, color=ft.Colors.GREY_700),
-                    ft.Text(codigo_presentado, size=16, selectable=True),
+                    ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.CODE,
+                                size=16,
+                                color=theme.COR_PRIMARIA,
+                            ),
+                            ft.Text(
+                                "Código",
+                                size=13,
+                                weight=ft.FontWeight.BOLD,
+                                color=theme.COR_TEXTO_SECUNDARIO,
+                            ),
+                        ],
+                        spacing=6,
+                    ),
+                    ft.Container(
+                        content=ft.Text(
+                            codigo_presentado,
+                            size=15,
+                            font_family=theme.FUENTE_CODIGO,
+                            selectable=True,
+                        ),
+                        bgcolor=theme.COR_DESTAQUE_FUNDO,
+                        padding=12,
+                        border_radius=8,
+                    ),
                 ],
-                spacing=4,
+                spacing=6,
             ),
             padding=14,
         )

@@ -29,3 +29,8 @@ TAMANHO_TITULO = 22
 TAMANHO_SUBTITULO = 18
 TAMANHO_TEXTO = 14
 TAMANHO_LEGENDA = 13
+
+# Família de letra monoespaçada usada para mostrar código (código
+# fonte/exercícios de completar código). Centraliza a escolha para
+# manter a aparência do código consistente em toda a plataforma.
+FUENTE_CODIGO = "Consolas"
