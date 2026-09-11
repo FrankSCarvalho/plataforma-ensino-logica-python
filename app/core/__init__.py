@@ -1,1 +1,0 @@
-"""Camada de configurações e utilitários centrais do projeto."""
