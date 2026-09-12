@@ -231,16 +231,24 @@ def test_atualizacao_altera_dados_e_preserva_id() -> None:
         data_atualizacao=datetime(2024, 2, 1, 12, 0, 0, tzinfo=timezone.utc),
     )
 
+    # A data enviada pelo chamador e ignorada: havendo alteracao efetiva,
+    # a persistencia gera a nova data_atualizacao (UTC, timezone-aware).
+    antes = datetime.now(timezone.utc)
+
     resultado = atualizar_materia(conexao, alterada)
     conexao.commit()
 
     assert resultado is not None
     assert resultado.id == criada.id  # identidade preservada
+    assert resultado.data_criacao == criada.data_criacao
+    assert resultado.data_atualizacao != alterada.data_atualizacao
+    assert resultado.data_atualizacao >= antes
+    assert resultado.data_atualizacao.tzinfo is not None
 
     recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
 
     assert recuperada is not None
-    assert recuperada == alterada  # a alteração chegou ao banco
+    assert recuperada == resultado  # a alteração chegou ao banco
     assert recuperada.nome == "Lógica Avançada"
     assert recuperada.descricao == "Nova descrição."
     assert recuperada.ativa is False
@@ -305,6 +313,352 @@ def test_materia_rejeita_datas_sem_fuso_horario() -> None:
 
     with pytest.raises(ValueError):
         criar_materia_exemplo_sem_fuso_data_atualizacao()
+
+
+def test_desativar_materia_preserva_identidade_e_registro() -> None:
+    # Desativar não exclui nem altera a identidade: o registro continua
+    # recuperável, com o mesmo id, apenas com ativa=False.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+    assert persistida.ativa is True
+
+    desativada = Materia(
+        id=persistida.id,
+        nome=persistida.nome,
+        descricao=persistida.descricao,
+        ativa=False,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, desativada)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.id == criada.id  # identidade inalterada
+    assert resultado.ativa is False  # domínio usa bool
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None  # não foi excluída
+    assert recuperada.id == criada.id
+    assert recuperada.ativa is False
+
+    # SQLite continua usando 0/1 para o booleano.
+    linha = conexao.execute(
+        "SELECT ativa FROM materia WHERE id = ?",
+        (criada.id,),
+    ).fetchone()
+    assert linha["ativa"] == 0
+
+
+def test_reativar_materia_desativada() -> None:
+    # Uma matéria desativada pode ser reativada sem perder a identidade.
+    conexao = criar_banco_com_materia()
+    materia = criar_materia_exemplo()
+    inativa = Materia(
+        id=None,
+        nome=materia.nome,
+        descricao=materia.descricao,
+        ativa=False,
+        ordem=materia.ordem,
+        data_criacao=materia.data_criacao,
+        data_atualizacao=materia.data_atualizacao,
+    )
+    criada = inserir_materia(conexao, inativa)
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+    assert persistida.ativa is False
+
+    reativada = Materia(
+        id=persistida.id,
+        nome=persistida.nome,
+        descricao=persistida.descricao,
+        ativa=True,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, reativada)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.id == criada.id
+    assert resultado.ativa is True
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None
+    assert recuperada.ativa is True
+    linha = conexao.execute(
+        "SELECT ativa FROM materia WHERE id = ?",
+        (criada.id,),
+    ).fetchone()
+    assert linha["ativa"] == 1
+
+
+def test_ordem_pode_ser_alterada_sem_alterar_id() -> None:
+    # 'ordem' é independente de 'id': pode mudar sem afetar a identidade.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    reordenada = Materia(
+        id=persistida.id,
+        nome=persistida.nome,
+        descricao=persistida.descricao,
+        ativa=persistida.ativa,
+        ordem=99,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, reordenada)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.id == criada.id  # id preservado
+    assert resultado.ordem == 99  # ordem alterada
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None
+    assert recuperada.id == criada.id
+    assert recuperada.ordem == 99
+
+
+def test_ordem_permite_valores_repetidos() -> None:
+    # Sem unicidade para 'ordem': duas matérias podem partilhar a posição.
+    conexao = criar_banco_com_materia()
+
+    primeira = inserir_materia(conexao, criar_materia_exemplo())
+    base_segunda = criar_materia_exemplo(nome="Matematica Basica")
+    segunda = Materia(
+        id=None,
+        nome=base_segunda.nome,
+        descricao=base_segunda.descricao,
+        ativa=base_segunda.ativa,
+        ordem=1,  # mesma ordem da primeira
+        data_criacao=base_segunda.data_criacao,
+        data_atualizacao=base_segunda.data_atualizacao,
+    )
+    segunda_criada = inserir_materia(conexao, segunda)
+    conexao.commit()
+
+    assert primeira.id != segunda_criada.id
+    assert primeira.ordem == segunda_criada.ordem == 1
+
+
+def test_atualizacao_preserva_data_criacao() -> None:
+    # Mesmo que o chamador envie outra data_criacao, o UPDATE nunca a altera.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    adulterada = Materia(
+        id=persistida.id,
+        nome="Logica Avancada",  # alteracao efetiva para forcar o UPDATE
+        descricao=persistida.descricao,
+        ativa=persistida.ativa,
+        ordem=persistida.ordem,
+        data_criacao=datetime(2030, 5, 5, 5, 5, 5, tzinfo=timezone.utc),
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, adulterada)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.data_criacao == persistida.data_criacao
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None
+    assert recuperada.data_criacao == persistida.data_criacao
+    assert recuperada.data_criacao == criada.data_criacao
+
+
+def test_atualizacao_nao_cria_outra_materia() -> None:
+    # Atualizar nunca insere: a quantidade de registros permanece a mesma.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    alterada = Materia(
+        id=persistida.id,
+        nome="Logica Avancada",
+        descricao=persistida.descricao,
+        ativa=persistida.ativa,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, alterada)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.id == criada.id
+
+    total = conexao.execute("SELECT COUNT(*) AS total FROM materia").fetchone()
+    assert total["total"] == 1
+
+    ids = [linha["id"] for linha in conexao.execute("SELECT id FROM materia")]
+    assert ids == [criada.id]
+
+
+def test_atualizacao_inexistente_nao_cria_registro() -> None:
+    # Id inexistente nao e atualizacao bem-sucedida nem cria registro.
+    conexao = criar_banco_com_materia()
+    materia = criar_materia_exemplo()
+    inexistente = Materia(
+        id=999999,
+        nome=materia.nome,
+        descricao=materia.descricao,
+        ativa=materia.ativa,
+        ordem=materia.ordem,
+        data_criacao=materia.data_criacao,
+        data_atualizacao=materia.data_atualizacao,
+    )
+
+    assert atualizar_materia(conexao, inexistente) is None
+    conexao.commit()
+
+    total = conexao.execute("SELECT COUNT(*) AS total FROM materia").fetchone()
+    assert total["total"] == 0
+    assert obter_materia_por_id(conexao, 999999) is None
+
+
+def test_data_atualizacao_avanca_quando_ha_alteracao_efetiva() -> None:
+    # Mesmo reutilizando o instante anterior, a alteracao efetiva em 'nome'
+    # faz data_atualizacao avancar (UTC, timezone-aware).
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    mesma_data = Materia(
+        id=persistida.id,
+        nome="Logica Avancada",  # unica alteracao efetiva
+        descricao=persistida.descricao,
+        ativa=persistida.ativa,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+
+    resultado = atualizar_materia(conexao, mesma_data)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.data_atualizacao > persistida.data_atualizacao
+    assert resultado.data_atualizacao.tzinfo is not None
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None
+    assert recuperada.data_atualizacao == resultado.data_atualizacao
+    assert recuperada.data_atualizacao > persistida.data_atualizacao
+
+
+def test_data_atualizacao_avanca_ao_alternar_ativa_e_ordem() -> None:
+    # 'ativa' e 'ordem' tambem contam como alteracao efetiva: cada uma,
+    # isoladamente, deve avancar data_atualizacao.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    # 1) Alterna apenas 'ativa'.
+    so_ativa = Materia(
+        id=persistida.id,
+        nome=persistida.nome,
+        descricao=persistida.descricao,
+        ativa=not persistida.ativa,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=persistida.data_atualizacao,
+    )
+    resultado_ativa = atualizar_materia(conexao, so_ativa)
+    conexao.commit()
+
+    assert resultado_ativa is not None
+    assert resultado_ativa.data_atualizacao > persistida.data_atualizacao
+
+    intermediaria = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert intermediaria is not None
+
+    # 2) Altera apenas 'ordem'.
+    so_ordem = Materia(
+        id=intermediaria.id,
+        nome=intermediaria.nome,
+        descricao=intermediaria.descricao,
+        ativa=intermediaria.ativa,
+        ordem=intermediaria.ordem + 10,
+        data_criacao=intermediaria.data_criacao,
+        data_atualizacao=intermediaria.data_atualizacao,
+    )
+    resultado_ordem = atualizar_materia(conexao, so_ordem)
+    conexao.commit()
+
+    assert resultado_ordem is not None
+    assert resultado_ordem.data_atualizacao > intermediaria.data_atualizacao
+    assert resultado_ordem.id == criada.id  # identidade preservada
+
+
+def test_data_atualizacao_nao_muda_sem_alteracao_efetiva() -> None:
+    # Valores exatamente iguais preservam data_atualizacao, inclusive se o
+    # chamador enviar outro instante na entidade.
+    conexao = criar_banco_com_materia()
+    criada = inserir_materia(conexao, criar_materia_exemplo())
+    conexao.commit()
+
+    persistida = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert persistida is not None
+
+    # Caso 1: entidade identica a persistida.
+    resultado = atualizar_materia(conexao, persistida)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.data_atualizacao == persistida.data_atualizacao
+
+    # Caso 2: mesmos nome/descricao/ativa/ordem, mas data_atualizacao
+    # diferente na entidade enviada — o banco mantem o instante anterior.
+    com_outra_data = Materia(
+        id=persistida.id,
+        nome=persistida.nome,
+        descricao=persistida.descricao,
+        ativa=persistida.ativa,
+        ordem=persistida.ordem,
+        data_criacao=persistida.data_criacao,
+        data_atualizacao=datetime(2030, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+    resultado_2 = atualizar_materia(conexao, com_outra_data)
+    conexao.commit()
+
+    assert resultado_2 is not None
+    assert resultado_2.data_atualizacao == persistida.data_atualizacao
+
+    recuperada = obter_materia_por_id(conexao, criada.id)  # type: ignore
+    assert recuperada is not None
+    assert recuperada.data_atualizacao == persistida.data_atualizacao
 
 
 def criar_materia_exemplo_sem_fuso_data_criacao() -> Materia:

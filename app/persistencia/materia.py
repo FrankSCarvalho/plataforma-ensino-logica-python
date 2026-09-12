@@ -1,7 +1,6 @@
 import sqlite3
 
-from datetime import datetime  # Usado para converter o texto ISO 8601 do SQLite de volta para datetime
-
+from datetime import datetime, timezone  # timezone garante o "agora" em UTC ao versionar a atualização
 from app.dominio.materia import Materia
 
 
@@ -89,21 +88,47 @@ def atualizar_materia(conexao: sqlite3.Connection, materia: Materia) -> Materia 
     # O WHERE usa o id: a identidade é preservada e a operação nunca cria
     # um novo registro (UPDATE não insere). Um id inexistente devolve None,
     # seguindo o padrão de busca sem resultado adotado pelo projeto.
-    # A existência é verificada com SELECT (e não com cursor.rowcount),
-    # pois um UPDATE cujos valores são idênticos aos já persistidos pode
-    # resultar em rowcount == 0 mesmo com a linha existindo.
-    existente = conexao.execute(
-        "SELECT 1 FROM materia WHERE id = ?",
+    # Lemos a linha persistida (e não usamos cursor.rowcount), pois um
+    # UPDATE cujos valores são idênticos aos já persistidos pode resultar
+    # em rowcount == 0 mesmo com a linha existindo.
+    linha = conexao.execute(
+        """
+        SELECT nome, descricao, ativa, ordem, data_criacao, data_atualizacao
+        FROM materia
+        WHERE id = ?
+        """,
         (materia.id,),
     ).fetchone()
-    if existente is None:
+    if linha is None:
         return None
+
+    # 'data_criacao' é imutável: mesmo que o chamador envie outro valor,
+    # o UPDATE nunca a altera (integridade do registro).
+    # Há alteração efetiva quando pelo menos um dos campos editáveis
+    # (nome, descricao, ativa ou ordem) difere do que está persistido.
+    houve_alteracao = (
+        materia.nome != linha["nome"]
+        or materia.descricao != linha["descricao"]
+        or int(materia.ativa) != linha["ativa"]
+        or materia.ordem != linha["ordem"]
+    )
+
+    # 'data_atualizacao' e controlada exclusivamente pela persistencia:
+    # havendo alteracao efetiva, gera o instante atual em UTC
+    # (timezone-aware); sem alteracao efetiva, preserva exatamente
+    # a 'data_atualizacao' persistida. O valor enviado pelo chamador
+    # nunca e honrado.
+    persistida_atualizacao = datetime.fromisoformat(linha["data_atualizacao"])
+    if houve_alteracao:
+        data_atualizacao = datetime.now(timezone.utc)
+    else:
+        data_atualizacao = persistida_atualizacao
 
     conexao.execute(
         """
         UPDATE materia
         SET nome = ?, descricao = ?, ativa = ?, ordem = ?,
-            data_criacao = ?, data_atualizacao = ?
+            data_atualizacao = ?
         WHERE id = ?
         """,
         (
@@ -111,11 +136,20 @@ def atualizar_materia(conexao: sqlite3.Connection, materia: Materia) -> Materia 
             materia.descricao,
             int(materia.ativa),
             materia.ordem,
-            materia.data_criacao.isoformat(),
-            materia.data_atualizacao.isoformat(),
+            data_atualizacao.isoformat(),
             materia.id,
         ),
     )
 
-    # Devolvemos a entidade atualizada (com o mesmo id).
-    return materia
+    # Devolvemos uma NOVA entidade (a original é frozen/imutável), com o
+    # mesmo id, a data_criacao persistida e a data_atualizacao resultante
+    # da regra acima.
+    return Materia(
+        id=materia.id,
+        nome=materia.nome,
+        descricao=materia.descricao,
+        ativa=materia.ativa,
+        ordem=materia.ordem,
+        data_criacao=datetime.fromisoformat(linha["data_criacao"]),
+        data_atualizacao=data_atualizacao,
+    )
