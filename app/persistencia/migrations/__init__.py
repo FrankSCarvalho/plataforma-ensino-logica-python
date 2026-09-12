@@ -1,0 +1,1 @@
+"""Infraestrutura de migrations do banco de dados."""
