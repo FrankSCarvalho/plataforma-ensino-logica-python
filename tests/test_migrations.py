@@ -10,17 +10,22 @@ from app.persistencia.migrations.executor import (
 
 
 def criar_conexao() -> sqlite3.Connection:
+    """Cria uma conexão SQLite em memória (descartável) para os testes."""
     conexao = sqlite3.connect(":memory:")
     conexao.row_factory = sqlite3.Row
     return conexao
 
 
-def test_banco_novo_inicia_na_versao_zero():
+def test_banco_novo_inicia_na_versao_zero() -> None:
+    # Um banco recém-criado começa com a versão do schema = 0,
+    # ou seja, nenhuma migration foi aplicada ainda.
     with criar_conexao() as conexao:
         assert obter_versao_schema(conexao) == 0
 
 
-def test_aplica_primeira_migration_e_atualiza_versao():
+def test_aplica_primeira_migration_e_atualiza_versao() -> None:
+    # Simula uma migration "de mentira" que cria uma tabela de teste
+    # e verifica que o executor a aplica e registra a versão 1.
     def aplicar(conexao: sqlite3.Connection) -> None:
         conexao.execute("CREATE TABLE teste (id INTEGER PRIMARY KEY)")
 
@@ -31,13 +36,16 @@ def test_aplica_primeira_migration_e_atualiza_versao():
 
         assert versao == 1
         assert obter_versao_schema(conexao) == 1
+        # sqlite_master é o catálogo interno que lista as tabelas existentes.
         assert conexao.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type = 'table' AND name = 'teste'"
         ).fetchone() is not None
 
 
-def test_multiplas_migrations_sao_aplicadas_em_ordem():
+def test_multiplas_migrations_sao_aplicadas_em_ordem() -> None:
+    # A ordem de aplicação deve ser pela versão (1 antes de 2),
+    # mesmo que as migrations sejam fornecidas fora de ordem.
     ordem = []
 
     def aplicar_2(conexao: sqlite3.Connection) -> None:
@@ -60,7 +68,9 @@ def test_multiplas_migrations_sao_aplicadas_em_ordem():
         assert versao == 2
 
 
-def test_banco_ja_atualizado_nao_reexecuta_migrations():
+def test_banco_ja_atualizado_nao_reexecuta_migrations() -> None:
+    # Idempotência: rodar de novo as migrations num banco já atualizado
+    # não deve re-executar nada (só aplica versões MAIORES que a atual).
     quantidade_execucoes = 0
 
     def aplicar(conexao: sqlite3.Connection) -> None:
@@ -76,7 +86,9 @@ def test_banco_ja_atualizado_nao_reexecuta_migrations():
         assert quantidade_execucoes == 1
 
 
-def test_banco_parcialmente_atualizado_recebe_somente_pendentes():
+def test_banco_parcialmente_atualizado_recebe_somente_pendentes() -> None:
+    # Um banco na versão 1 deve receber apenas a migration 2 quando
+    # executado com as duas (a 1 já foi aplicada, não roda de novo).
     ordem = []
 
     def aplicar_1(conexao: sqlite3.Connection) -> None:
@@ -96,7 +108,9 @@ def test_banco_parcialmente_atualizado_recebe_somente_pendentes():
         assert ordem == [1, 2]
 
 
-def test_falha_em_migration_faz_rollback_e_preserva_versao_anterior():
+def test_falha_em_migration_faz_rollback_e_preserva_versao_anterior() -> None:
+    # Atomicidade: se uma migration falha no meio, tudo o que ela fez até ali
+    # é revertido (ROLLBACK) e o banco permanece na versão anterior.
     def aplicar_1(conexao: sqlite3.Connection) -> None:
         conexao.execute("CREATE TABLE primeiro (id INTEGER PRIMARY KEY)")
 
@@ -116,13 +130,16 @@ def test_falha_em_migration_faz_rollback_e_preserva_versao_anterior():
             executar_migrations(conexao, migrations)
 
         assert obter_versao_schema(conexao) == 1
+        # A tabela criada pela migration que falhou NÃO deve existir.
         assert conexao.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type = 'table' AND name = 'segundo'"
         ).fetchone() is None
 
 
-def test_migrations_posteriores_nao_sao_executadas_apos_falha():
+def test_migrations_posteriores_nao_sao_executadas_apos_falha() -> None:
+    # Ao ocorrer uma falha na migration 2, a 3 não deve nem ser tentada:
+    # a execução é sequencial e se interrompe no primeiro erro.
     ordem = []
 
     def aplicar_2(conexao: sqlite3.Connection) -> None:
@@ -146,7 +163,9 @@ def test_migrations_posteriores_nao_sao_executadas_apos_falha():
         assert obter_versao_schema(conexao) == 1
 
 
-def test_versoes_duplicadas_sao_rejeitadas_antes_da_execucao():
+def test_versoes_duplicadas_sao_rejeitadas_antes_da_execucao() -> None:
+    # A validação acontece ANTES de qualquer execução: versões duplicadas
+    # geram um erro sem que nenhuma migration chegue a ser aplicada.
     executou = False
 
     def aplicar(conexao: sqlite3.Connection) -> None:
@@ -166,7 +185,8 @@ def test_versoes_duplicadas_sao_rejeitadas_antes_da_execucao():
         assert obter_versao_schema(conexao) == 0
 
 
-def test_versionamento_negativo_ou_zero_e_rejeitado():
+def test_versionamento_negativo_ou_zero_e_rejeitado() -> None:
+    # Versões <= 0 são inválidas (a versão 0 fica reservada ao banco novo).
     migration = Migration(0, "invalida", lambda conexao: None)
 
     with criar_conexao() as conexao:
