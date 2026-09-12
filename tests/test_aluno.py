@@ -41,7 +41,7 @@ def test_insercao_gera_id_e_recuperacao_preserva_dados() -> None:
     criado = inserir_aluno(conexao, Aluno(id=None, nome="Maria"))
     conexao.commit()
 
-    recuperado = obter_aluno_por_id(conexao, criado.id)
+    recuperado = obter_aluno_por_id(conexao, criado.id) # type: ignore
 
     assert recuperado == criado
     assert recuperado is not None
