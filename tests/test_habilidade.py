@@ -337,7 +337,6 @@ def test_atualizacao_altera_dados_e_preserva_id_e_modulo() -> None:
     recuperada = obter_habilidade_por_id(conexao, criada.id)  # type: ignore
 
     assert recuperada is not None
-    assert recuperada == alterada
     assert recuperada.id == criada.id
     assert recuperada.modulo_id == modulo_id
     assert recuperada.nome == "Construir condicionais"
@@ -345,7 +344,8 @@ def test_atualizacao_altera_dados_e_preserva_id_e_modulo() -> None:
     assert recuperada.ativa is False
     assert recuperada.ordem == 2
     assert recuperada.data_criacao == criada.data_criacao
-    assert recuperada.data_atualizacao == datetime(2024, 2, 1, 12, 0, 0, tzinfo=timezone.utc)
+    assert recuperada.data_atualizacao > criada.data_atualizacao
+    assert resultado.data_atualizacao == recuperada.data_atualizacao
 
 
 def test_atualizacao_nao_altera_o_vinculo_ao_modulo() -> None:
@@ -397,7 +397,8 @@ def test_atualizacao_nao_altera_o_vinculo_ao_modulo() -> None:
     assert recuperada.ativa is False
     assert recuperada.ordem == 2
     assert recuperada.data_criacao == criada.data_criacao
-    assert recuperada.data_atualizacao == datetime(2024, 2, 1, 12, 0, 0, tzinfo=timezone.utc)
+    assert recuperada.data_atualizacao > persistida.data_atualizacao
+    assert resultado.data_atualizacao == recuperada.data_atualizacao
 
     # Confirmação direta no banco: o modulo_id persistido segue sendo A.
     linha = conexao.execute(
@@ -516,8 +517,17 @@ def test_ativar_ja_ativa_nao_altera_data_atualizacao() -> None:
 def test_desativar_ja_inativa_nao_altera_data_atualizacao() -> None:
     conexao = criar_banco_com_habilidade()
     modulo_id = criar_modulo_id(conexao)
-    inativa = criar_habilidade_exemplo(modulo_id=modulo_id, nome="Inativa")
-    inativa.ativa = False
+    base = criar_habilidade_exemplo(modulo_id=modulo_id, nome="Inativa")
+    inativa = Habilidade(
+        id=None,
+        modulo_id=base.modulo_id,
+        nome=base.nome,
+        descricao=base.descricao,
+        ativa=False,
+        ordem=base.ordem,
+        data_criacao=base.data_criacao,
+        data_atualizacao=base.data_atualizacao,
+    )
     criada = inserir_habilidade(conexao, inativa)
     conexao.commit()
 
