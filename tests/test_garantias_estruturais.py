@@ -143,16 +143,15 @@ def test_migrations_reexecutadas_nao_alteram_o_schema() -> None:
     conexao = sqlite3.connect(":memory:")
     try:
         # Primeira execução em banco vazio: aplica TODAS as migrations
-        # registradas (v1 aluno + v2 materia + v3 modulo + v4 habilidade)
-        # e devolve a versão 4.
-        assert executar_migrations(conexao, MIGRATIONS) == 4
+        # registradas até a v5 (nivel) e devolve a versão 5.
+        assert executar_migrations(conexao, MIGRATIONS) == 5
 
         schema_antes = conexao.execute(
             "SELECT type, name, sql FROM sqlite_master "
             "WHERE type IN ('table', 'index') ORDER BY type, name"
         ).fetchall()
 
-        assert executar_migrations(conexao, MIGRATIONS) == 4
+        assert executar_migrations(conexao, MIGRATIONS) == 5
 
         schema_depois = conexao.execute(
             "SELECT type, name, sql FROM sqlite_master "
@@ -160,7 +159,7 @@ def test_migrations_reexecutadas_nao_alteram_o_schema() -> None:
         ).fetchall()
 
         assert schema_depois == schema_antes  # nenhuma alteração na 2ª execução
-        assert conexao.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert conexao.execute("PRAGMA user_version").fetchone()[0] == 5
     finally:
         conexao.close()
 
@@ -174,8 +173,8 @@ def test_schema_final_e_reproduzivel_a_partir_de_banco_vazio() -> None:
 
         versao_final = executar_migrations(conexao, MIGRATIONS)
 
-        assert versao_final == 4
-        assert conexao.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert versao_final == 5
+        assert conexao.execute("PRAGMA user_version").fetchone()[0] == 5
         assert conexao.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type = 'table' AND name = 'aluno'"

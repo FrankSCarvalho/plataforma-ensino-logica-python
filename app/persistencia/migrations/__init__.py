@@ -10,8 +10,15 @@ from app.persistencia.migrations.versao_1_aluno import MIGRATION as MIGRATION_AL
 from app.persistencia.migrations.versao_2_materia import MIGRATION as MIGRATION_MATERIA
 from app.persistencia.migrations.versao_3_modulo import MIGRATION as MIGRATION_MODULO
 from app.persistencia.migrations.versao_4_habilidade import MIGRATION as MIGRATION_HABILIDADE
+from app.persistencia.migrations.versao_5_nivel import MIGRATION as MIGRATION_NIVEL
 
 
 # Tupla ordenada das migrations disponíveis.
 # Quando for adicionada uma nova migração, basta incluí-la nesta lista.
-MIGRATIONS = (MIGRATION_ALUNO, MIGRATION_MATERIA, MIGRATION_MODULO, MIGRATION_HABILIDADE)
+MIGRATIONS = (
+    MIGRATION_ALUNO,
+    MIGRATION_MATERIA,
+    MIGRATION_MODULO,
+    MIGRATION_HABILIDADE,
+    MIGRATION_NIVEL,
+)

@@ -379,9 +379,9 @@ def test_habilidade_nao_cria_indices_extras() -> None:
         conexao.close()
 
 
-def test_habilidade_nao_antecipa_nivel_ou_exercicio() -> None:
-    # A migration v4 cria SOMENTE a estrutura da habilidade: nenhuma tabela
-    # de nível, exercício ou pré-requisitos pode ser antecipada.
+def test_habilidade_nao_antecipa_exercicio_ou_pre_requisito() -> None:
+    # A migration v4 cria somente a estrutura da habilidade; tabelas de
+    # exercício e pré-requisitos não podem ser antecipadas.
     conexao = criar_banco_migrado()
     try:
         nomes_tabelas = [
@@ -391,7 +391,7 @@ def test_habilidade_nao_antecipa_nivel_ou_exercicio() -> None:
             ).fetchall()
         ]
 
-        for nome in ("nivel", "exercicio", "pre_requisito", "pre_requisitos"):
+        for nome in ("exercicio", "pre_requisito", "pre_requisitos"):
             assert nome not in nomes_tabelas
     finally:
         conexao.close()
