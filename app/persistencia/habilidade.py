@@ -1,6 +1,6 @@
 import sqlite3
+from datetime import datetime, timezone
 
-from datetime import datetime  # Usado para converter o texto ISO 8601 do SQLite de volta para datetime
 from app.dominio.habilidade import Habilidade
 
 
@@ -82,11 +82,91 @@ def obter_habilidade_por_id(
     )
 
 
+def ativar_habilidade(conexao: sqlite3.Connection, habilidade_id: int) -> Habilidade | None:
+    """Ativa uma habilidade existente (ativa=True), preservando identidade e vínculo."""
+    atual = obter_habilidade_por_id(conexao, habilidade_id)
+    if atual is None:
+        return None
+
+    return atualizar_habilidade(
+        conexao,
+        Habilidade(
+            id=atual.id,
+            modulo_id=atual.modulo_id,
+            nome=atual.nome,
+            descricao=atual.descricao,
+            ativa=True,
+            ordem=atual.ordem,
+            data_criacao=atual.data_criacao,
+            data_atualizacao=atual.data_atualizacao,
+        ),
+    )
+
+
+def desativar_habilidade(conexao: sqlite3.Connection, habilidade_id: int) -> Habilidade | None:
+    """Desativa uma habilidade existente (ativa=False), sem excluir o registro."""
+    atual = obter_habilidade_por_id(conexao, habilidade_id)
+    if atual is None:
+        return None
+
+    return atualizar_habilidade(
+        conexao,
+        Habilidade(
+            id=atual.id,
+            modulo_id=atual.modulo_id,
+            nome=atual.nome,
+            descricao=atual.descricao,
+            ativa=False,
+            ordem=atual.ordem,
+            data_criacao=atual.data_criacao,
+            data_atualizacao=atual.data_atualizacao,
+        ),
+    )
+
+
+def reativar_habilidade(conexao: sqlite3.Connection, habilidade_id: int) -> Habilidade | None:
+    """Reativa uma habilidade existente (ativa=True)."""
+    return ativar_habilidade(conexao, habilidade_id)
+
+
+def listar_habilidades_orderado(conexao: sqlite3.Connection) -> list[Habilidade]:
+    """Lista habilidades por (ordem, id) para ordenação estável sem unicidade de ordem."""
+    linhas = conexao.execute(
+        """
+        SELECT id, modulo_id, nome, descricao, ativa, ordem, data_criacao, data_atualizacao
+        FROM habilidade
+        ORDER BY ordem, id
+        """,
+    ).fetchall()
+
+    return [
+        Habilidade(
+            id=linha["id"],
+            modulo_id=linha["modulo_id"],
+            nome=linha["nome"],
+            descricao=linha["descricao"],
+            ativa=bool(linha["ativa"]),
+            ordem=linha["ordem"],
+            data_criacao=datetime.fromisoformat(linha["data_criacao"]),
+            data_atualizacao=datetime.fromisoformat(linha["data_atualizacao"]),
+        )
+        for linha in linhas
+    ]
+
+
 def atualizar_habilidade(
     conexao: sqlite3.Connection,
     habilidade: Habilidade,
 ) -> Habilidade | None:
-    """Atualiza os dados de uma habilidade existente, preservando a identidade."""
+    """Atualiza os dados de uma habilidade existente, preservando a identidade.
+
+    A ``data_atualizacao`` é controlada exclusivamente pela persistência:
+    - havendo alteração efetiva em ``nome``, ``descricao``, ``ativa`` ou ``ordem``,
+      ela é avançada para o instante atual em UTC (timezone-aware);
+    - sem alteração efetiva, o valor persistido é preservado, mesmo que a entidade
+      recebida carregue outro ``data_atualizacao``.
+    ``data_criacao`` e ``modulo_id`` são imutáveis por atualização.
+    """
     # Uma habilidade só pode ser atualizada se já possuir id atribuído pelo banco.
     if habilidade.id is None:
         raise ValueError("Uma habilidade sem identificador não pode ser atualizada.")
@@ -94,30 +174,52 @@ def atualizar_habilidade(
     # O WHERE usa o id: a identidade é preservada e a operação nunca cria
     # um novo registro (UPDATE não insere). Um id inexistente devolve None,
     # seguindo o padrão de busca sem resultado adotado pelo projeto.
-    # Lemos o 'modulo_id' persistido (e não usamos cursor.rowcount), pois um
+    # Lemos a linha persistida (e não usamos cursor.rowcount), pois um
     # UPDATE cujos valores são idênticos aos já persistidos pode resultar
     # em rowcount == 0 mesmo com a linha existindo.
-    existente = conexao.execute(
-        "SELECT modulo_id FROM habilidade WHERE id = ?",
+    linha = conexao.execute(
+        """
+        SELECT modulo_id, nome, descricao, ativa, ordem, data_criacao, data_atualizacao
+        FROM habilidade
+        WHERE id = ?
+        """,
         (habilidade.id,),
     ).fetchone()
-    if existente is None:
+    if linha is None:
         return None
+
+    # 'data_criacao' é imutável: mesmo que o chamador envie outro valor,
+    # o UPDATE nunca a altera (integridade do registro).
+    # Há alteração efetiva quando pelo menos um dos campos editáveis
+    # (nome, descricao, ativa ou ordem) difere do que está persistido.
+    houve_alteracao = (
+        habilidade.nome != linha["nome"]
+        or habilidade.descricao != linha["descricao"]
+        or int(habilidade.ativa) != linha["ativa"]
+        or habilidade.ordem != linha["ordem"]
+    )
+
+    # 'data_atualizacao' é controlada exclusivamente pela persistência:
+    # havendo alteração efetiva, gera o instante atual em UTC
+    # (timezone-aware); sem alteração efetiva, preserva exatamente
+    # a 'data_atualizacao' persistida. O valor enviado pelo chamador
+    # nunca é honrado.
+    persistida_atualizacao = datetime.fromisoformat(linha["data_atualizacao"])
+    if houve_alteracao:
+        data_atualizacao = datetime.now(timezone.utc)
+    else:
+        data_atualizacao = persistida_atualizacao
 
     # O vínculo estrutural com o módulo é preservado: o 'modulo_id' da
     # entidade recebida NUNCA é usado para alterar o registro. Mover uma
     # habilidade entre módulos está fora do escopo desta operação.
-    modulo_id_persistido = existente["modulo_id"]
+    modulo_id_persistido = linha["modulo_id"]
 
-    # Nesta subetapa (F2-003.2) a atualização persiste os atributos recebidos
-    # da entidade, incluindo as datas definidas por ela; a regra automática
-    # de data_atualizacao por alteração efetiva pertence à F2-003.3.
-    # O 'modulo_id' fica fora do SET: o UPDATE não pode alterá-lo.
     conexao.execute(
         """
         UPDATE habilidade
         SET nome = ?, descricao = ?, ativa = ?, ordem = ?,
-            data_criacao = ?, data_atualizacao = ?
+            data_atualizacao = ?
         WHERE id = ?
         """,
         (
@@ -125,14 +227,14 @@ def atualizar_habilidade(
             habilidade.descricao,
             int(habilidade.ativa),
             habilidade.ordem,
-            habilidade.data_criacao.isoformat(),
-            habilidade.data_atualizacao.isoformat(),
+            data_atualizacao.isoformat(),
             habilidade.id,
         ),
     )
 
     # Devolvemos uma NOVA entidade (a original é frozen/imutável), com o
-    # mesmo id e o modulo_id PERSISTIDO (não o recebido do chamador).
+    # mesmo id, o mesmo modulo_id PERSISTIDO, a data_criacao PERSISTIDA e a
+    # data_atualizacao resultante da regra acima.
     return Habilidade(
         id=habilidade.id,
         modulo_id=modulo_id_persistido,
@@ -140,6 +242,6 @@ def atualizar_habilidade(
         descricao=habilidade.descricao,
         ativa=habilidade.ativa,
         ordem=habilidade.ordem,
-        data_criacao=habilidade.data_criacao,
-        data_atualizacao=habilidade.data_atualizacao,
+        data_criacao=datetime.fromisoformat(linha["data_criacao"]),
+        data_atualizacao=data_atualizacao,
     )

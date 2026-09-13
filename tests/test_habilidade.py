@@ -9,8 +9,12 @@ import pytest  # Framework de teste: fornece pytest.raises
 from app.dominio.habilidade import Habilidade
 from app.persistencia.habilidade import (
     atualizar_habilidade,
+    ativar_habilidade,
+    desativar_habilidade,
     inserir_habilidade,
+    listar_habilidades_orderado,
     obter_habilidade_por_id,
+    reativar_habilidade,
 )
 from app.persistencia.migrations import MIGRATIONS
 from app.persistencia.migrations.executor import executar_migrations
@@ -437,6 +441,180 @@ def test_atualizacao_exige_identificador() -> None:
         atualizar_habilidade(
             conexao, criar_habilidade_exemplo(modulo_id=modulo_id, id=None)
         )
+
+
+def test_ativa_somente_disponibilidade_para_oferta() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    ativada = ativar_habilidade(conexao, criada.id) # type: ignore
+    conexao.commit()
+
+    assert ativada is not None
+    assert ativada.ativa is True
+    assert ativada.id == criada.id
+    assert ativada.modulo_id == modulo_id
+
+
+def test_desativa_nao_exclui_registro() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    desativada = desativar_habilidade(conexao, criada.id)
+    conexao.commit()
+
+    assert desativada is not None
+    assert desativada.ativa is False
+    assert desativada.id == criada.id
+
+    recuperada = obter_habilidade_por_id(conexao, criada.id)
+    assert recuperada is not None
+    assert recuperada.nome == criada.nome
+
+
+def test_reativacao_preserva_identidade_e_vinculo() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    desativada = desativar_habilidade(conexao, criada.id)
+    conexao.commit()
+    assert desativada is not None
+    assert desativada.ativa is False
+
+    reativada = reativar_habilidade(conexao, criada.id)
+    conexao.commit()
+    assert reativada is not None
+    assert reativada.ativa is True
+    assert reativada.id == criada.id
+    assert reativada.modulo_id == modulo_id
+
+
+def test_ativar_ja_ativa_nao_altera_data_atualizacao() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    persistida = obter_habilidade_por_id(conexao, criada.id)
+    assert persistida is not None
+    original = persistida.data_atualizacao
+
+    resultado = ativar_habilidade(conexao, criada.id)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.data_atualizacao == original
+    assert resultado.ativa is True
+    assert resultado.id == criada.id
+
+
+def test_desativar_ja_inativa_nao_altera_data_atualizacao() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    inativa = criar_habilidade_exemplo(modulo_id=modulo_id, nome="Inativa")
+    inativa.ativa = False
+    criada = inserir_habilidade(conexao, inativa)
+    conexao.commit()
+
+    persistida = obter_habilidade_por_id(conexao, criada.id)
+    assert persistida is not None
+    original = persistida.data_atualizacao
+
+    resultado = desativar_habilidade(conexao, criada.id)
+    conexao.commit()
+
+    assert resultado is not None
+    assert resultado.data_atualizacao == original
+    assert resultado.ativa is False
+    assert resultado.id == criada.id
+
+
+def test_ativa_preserva_id_e_modulo_id() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_a = criar_modulo_id(conexao, "Módulo A")
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_a))
+    conexao.commit()
+
+    ativada = ativar_habilidade(conexao, criada.id)
+    conexao.commit()
+
+    assert ativada is not None
+    assert ativada.id == criada.id
+    assert ativada.modulo_id == modulo_a
+
+
+def test_desativa_preserva_id_e_modulo_id() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    desativada = desativar_habilidade(conexao, criada.id)
+    conexao.commit()
+
+    assert desativada is not None
+    assert desativada.id == criada.id
+    assert desativada.modulo_id == modulo_id
+
+
+def test_ordenacao_listar_habilidades() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+
+    primeiras = Habilidade(
+        id=None,
+        modulo_id=modulo_id,
+        nome="Primeira",
+        descricao="Primeira",
+        ativa=True,
+        ordem=2,
+        data_criacao=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
+        data_atualizacao=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
+    )
+    ultima = Habilidade(
+        id=None,
+        modulo_id=modulo_id,
+        nome="Ultima",
+        descricao="Ultima",
+        ativa=True,
+        ordem=2,
+        data_criacao=datetime(2024, 1, 4, 10, 0, 0, tzinfo=timezone.utc),
+        data_atualizacao=datetime(2024, 1, 4, 10, 0, 0, tzinfo=timezone.utc),
+    )
+    p = inserir_habilidade(conexao, primeiras)
+    u = inserir_habilidade(conexao, ultima)
+    conexao.commit()
+
+    lista = listar_habilidades_orderado(conexao)
+
+    assert len(lista) == 2
+    assert lista[0].id == p.id
+    assert lista[1].id == u.id
+    assert lista[0].ordem == 2
+    assert lista[1].ordem == 2
+
+
+def test_listar_habilidades_retorna_entidades_do_dominio() -> None:
+    conexao = criar_banco_com_habilidade()
+    modulo_id = criar_modulo_id(conexao)
+    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
+    conexao.commit()
+
+    lista = listar_habilidades_orderado(conexao)
+
+    assert len(lista) == 1
+    item = lista[0]
+    assert item.id == criada.id
+    assert item.modulo_id == modulo_id
+    assert item.nome == "Identificar variáveis"
+    assert item.ativa is True
+    assert isinstance(item, Habilidade)
 
 
 def criar_habilidade_sem_fuso_data_criacao() -> Habilidade:
