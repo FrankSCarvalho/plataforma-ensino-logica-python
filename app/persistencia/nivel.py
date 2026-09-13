@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.dominio.nivel import Nivel
 
@@ -70,18 +70,35 @@ def atualizar_nivel(conexao: sqlite3.Connection, nivel: Nivel) -> Nivel | None:
         raise ValueError("Um nível sem identificador não pode ser atualizado.")
 
     linha = conexao.execute(
-        "SELECT habilidade_id FROM nivel WHERE id = ?",
+        """
+        SELECT habilidade_id, nome, descricao, ativa, ordem, data_criacao, data_atualizacao
+        FROM nivel
+        WHERE id = ?
+        """,
         (nivel.id,),
     ).fetchone()
     if linha is None:
         return None
 
+    houve_alteracao = (
+        nivel.nome != linha["nome"]
+        or nivel.descricao != linha["descricao"]
+        or int(nivel.ativa) != linha["ativa"]
+        or nivel.ordem != linha["ordem"]
+    )
+    data_atualizacao_persistida = datetime.fromisoformat(linha["data_atualizacao"])
+    data_atualizacao = (
+        datetime.now(timezone.utc)
+        if houve_alteracao
+        else data_atualizacao_persistida
+    )
     habilidade_id_persistido = linha["habilidade_id"]
+    data_criacao_persistida = datetime.fromisoformat(linha["data_criacao"])
     conexao.execute(
         """
         UPDATE nivel
         SET nome = ?, descricao = ?, ativa = ?, ordem = ?,
-            data_criacao = ?, data_atualizacao = ?
+            data_atualizacao = ?
         WHERE id = ?
         """,
         (
@@ -89,8 +106,7 @@ def atualizar_nivel(conexao: sqlite3.Connection, nivel: Nivel) -> Nivel | None:
             nivel.descricao,
             int(nivel.ativa),
             nivel.ordem,
-            nivel.data_criacao.isoformat(),
-            nivel.data_atualizacao.isoformat(),
+            data_atualizacao.isoformat(),
             nivel.id,
         ),
     )
@@ -102,6 +118,53 @@ def atualizar_nivel(conexao: sqlite3.Connection, nivel: Nivel) -> Nivel | None:
         descricao=nivel.descricao,
         ativa=nivel.ativa,
         ordem=nivel.ordem,
-        data_criacao=nivel.data_criacao,
-        data_atualizacao=nivel.data_atualizacao,
+        data_criacao=data_criacao_persistida,
+        data_atualizacao=data_atualizacao,
     )
+
+
+def ativar_nivel(conexao: sqlite3.Connection, nivel_id: int) -> Nivel | None:
+    """Ativa um nível existente, preservando identidade e vínculo estrutural."""
+    atual = obter_nivel_por_id(conexao, nivel_id)
+    if atual is None:
+        return None
+
+    return atualizar_nivel(
+        conexao,
+        Nivel(
+            id=atual.id,
+            habilidade_id=atual.habilidade_id,
+            nome=atual.nome,
+            descricao=atual.descricao,
+            ativa=True,
+            ordem=atual.ordem,
+            data_criacao=atual.data_criacao,
+            data_atualizacao=atual.data_atualizacao,
+        ),
+    )
+
+
+def desativar_nivel(conexao: sqlite3.Connection, nivel_id: int) -> Nivel | None:
+    """Desativa um nível existente, sem excluir seu registro."""
+    atual = obter_nivel_por_id(conexao, nivel_id)
+    if atual is None:
+        return None
+
+    return atualizar_nivel(
+        conexao,
+        Nivel(
+            id=atual.id,
+            habilidade_id=atual.habilidade_id,
+            nome=atual.nome,
+            descricao=atual.descricao,
+            ativa=False,
+            ordem=atual.ordem,
+            data_criacao=atual.data_criacao,
+            data_atualizacao=atual.data_atualizacao,
+        ),
+    )
+
+
+def reativar_nivel(conexao: sqlite3.Connection, nivel_id: int) -> Nivel | None:
+    """Reativa um nível existente."""
+    return ativar_nivel(conexao, nivel_id)

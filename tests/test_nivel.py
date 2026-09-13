@@ -1,5 +1,6 @@
 import inspect
 import sqlite3
+from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
@@ -10,9 +11,12 @@ from app.persistencia.habilidade import inserir_habilidade
 from app.persistencia.migrations import MIGRATIONS
 from app.persistencia.migrations.executor import executar_migrations
 from app.persistencia.nivel import (
+    ativar_nivel,
     atualizar_nivel,
+    desativar_nivel,
     inserir_nivel,
     obter_nivel_por_id,
+    reativar_nivel,
 )
 
 
@@ -193,8 +197,9 @@ def test_atualizacao_altera_campos_permitidos_e_preserva_id_e_habilidade() -> No
     assert recuperado.descricao == "Aplicação guiada da habilidade."
     assert recuperado.ativa is False
     assert recuperado.ordem == 2
-    assert recuperado.data_criacao == atualizacao.data_criacao
-    assert recuperado.data_atualizacao == atualizacao.data_atualizacao
+    assert recuperado.data_criacao == criado.data_criacao
+    assert recuperado.data_atualizacao > criado.data_atualizacao
+    assert resultado.data_atualizacao == recuperado.data_atualizacao
 
 
 def test_atualizacao_exige_id_e_retorna_none_quando_inexistente() -> None:
@@ -206,3 +211,148 @@ def test_atualizacao_exige_id_e_retorna_none_quando_inexistente() -> None:
 
     inexistente = criar_nivel_exemplo(id=999999, habilidade_id=habilidade_id)
     assert atualizar_nivel(conexao, inexistente) is None
+
+
+def test_ativar_nivel_inativo_atualiza_data_e_preserva_vinculo() -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(
+        conexao,
+        replace(criar_nivel_exemplo(habilidade_id=habilidade_id), ativa=False),
+    )
+    conexao.commit()
+
+    ativado = ativar_nivel(conexao, criado.id)  # type: ignore[arg-type]
+
+    assert ativado is not None
+    assert ativado.ativa is True
+    assert ativado.id == criado.id
+    assert ativado.habilidade_id == habilidade_id
+    assert ativado.data_criacao == criado.data_criacao
+    assert ativado.data_atualizacao > criado.data_atualizacao
+
+
+def test_desativar_nivel_ativo_atualiza_data_sem_excluir_registro() -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(conexao, criar_nivel_exemplo(habilidade_id=habilidade_id))
+    conexao.commit()
+
+    desativado = desativar_nivel(conexao, criado.id)  # type: ignore[arg-type]
+    recuperado = obter_nivel_por_id(conexao, criado.id)  # type: ignore[arg-type]
+
+    assert desativado is not None
+    assert desativado.ativa is False
+    assert desativado.data_atualizacao > criado.data_atualizacao
+    assert recuperado is not None
+    assert recuperado.id == criado.id
+    assert recuperado.nome == criado.nome
+
+
+def test_reativar_nivel_preserva_identidade_e_vinculo() -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(
+        conexao,
+        replace(criar_nivel_exemplo(habilidade_id=habilidade_id), ativa=False),
+    )
+    conexao.commit()
+
+    reativado = reativar_nivel(conexao, criado.id)  # type: ignore[arg-type]
+
+    assert reativado is not None
+    assert reativado.ativa is True
+    assert reativado.id == criado.id
+    assert reativado.habilidade_id == habilidade_id
+
+
+@pytest.mark.parametrize(
+    ("operacao", "ativa"),
+    [(ativar_nivel, True), (desativar_nivel, False)],
+)
+def test_ativacao_idempotente_nao_altera_data_atualizacao(
+    operacao: object,
+    ativa: bool,
+) -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(
+        conexao,
+        replace(criar_nivel_exemplo(habilidade_id=habilidade_id), ativa=ativa),
+    )
+    conexao.commit()
+
+    resultado = operacao(conexao, criado.id)  # type: ignore[operator, arg-type]
+
+    assert resultado is not None
+    assert resultado.ativa is ativa
+    assert resultado.data_atualizacao == criado.data_atualizacao
+    assert resultado.data_criacao == criado.data_criacao
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [
+        ("nome", "Avançado"),
+        ("descricao", "Aprofundamento da habilidade."),
+        ("ativa", False),
+        ("ordem", 8),
+    ],
+)
+def test_alteracao_efetiva_atualiza_data_atualizacao(
+    campo: str,
+    valor: str | bool | int,
+) -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(conexao, criar_nivel_exemplo(habilidade_id=habilidade_id))
+    conexao.commit()
+    atualizacao = replace(
+        criado,
+        **{campo: valor},
+        data_criacao=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        data_atualizacao=datetime(2030, 1, 2, tzinfo=timezone.utc),
+    )
+
+    resultado = atualizar_nivel(conexao, atualizacao)
+
+    assert resultado is not None
+    assert resultado.data_atualizacao > criado.data_atualizacao
+    assert resultado.data_atualizacao != atualizacao.data_atualizacao
+    assert resultado.data_criacao == criado.data_criacao
+
+
+def test_atualizacao_sem_mudanca_efetiva_preserva_datas_persistidas() -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    criado = inserir_nivel(conexao, criar_nivel_exemplo(habilidade_id=habilidade_id))
+    conexao.commit()
+    mesma_definicao = replace(
+        criado,
+        data_criacao=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        data_atualizacao=datetime(2030, 1, 2, tzinfo=timezone.utc),
+    )
+
+    resultado = atualizar_nivel(conexao, mesma_definicao)
+
+    assert resultado is not None
+    assert resultado.data_criacao == criado.data_criacao
+    assert resultado.data_atualizacao == criado.data_atualizacao
+
+
+def test_ordem_pode_repetir_e_ser_alterada_sem_mudar_id() -> None:
+    conexao = criar_banco_com_nivel()
+    habilidade_id = criar_habilidade_id(conexao)
+    primeiro = inserir_nivel(conexao, criar_nivel_exemplo(habilidade_id=habilidade_id))
+    segundo = inserir_nivel(
+        conexao,
+        replace(criar_nivel_exemplo(habilidade_id=habilidade_id), nome="Intermediário"),
+    )
+    conexao.commit()
+
+    reordenado = atualizar_nivel(conexao, replace(primeiro, ordem=7))
+
+    assert primeiro.ordem == segundo.ordem
+    assert reordenado is not None
+    assert reordenado.id == primeiro.id
+    assert reordenado.ordem == 7
