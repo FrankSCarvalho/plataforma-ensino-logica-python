@@ -12,7 +12,6 @@ from app.persistencia.habilidade import (
     ativar_habilidade,
     desativar_habilidade,
     inserir_habilidade,
-    listar_habilidades_orderado,
     obter_habilidade_por_id,
     reativar_habilidade,
 )
@@ -561,60 +560,6 @@ def test_desativa_preserva_id_e_modulo_id() -> None:
     assert desativada is not None
     assert desativada.id == criada.id
     assert desativada.modulo_id == modulo_id
-
-
-def test_ordenacao_listar_habilidades() -> None:
-    conexao = criar_banco_com_habilidade()
-    modulo_id = criar_modulo_id(conexao)
-
-    primeiras = Habilidade(
-        id=None,
-        modulo_id=modulo_id,
-        nome="Primeira",
-        descricao="Primeira",
-        ativa=True,
-        ordem=2,
-        data_criacao=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
-        data_atualizacao=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
-    )
-    ultima = Habilidade(
-        id=None,
-        modulo_id=modulo_id,
-        nome="Ultima",
-        descricao="Ultima",
-        ativa=True,
-        ordem=2,
-        data_criacao=datetime(2024, 1, 4, 10, 0, 0, tzinfo=timezone.utc),
-        data_atualizacao=datetime(2024, 1, 4, 10, 0, 0, tzinfo=timezone.utc),
-    )
-    p = inserir_habilidade(conexao, primeiras)
-    u = inserir_habilidade(conexao, ultima)
-    conexao.commit()
-
-    lista = listar_habilidades_orderado(conexao)
-
-    assert len(lista) == 2
-    assert lista[0].id == p.id
-    assert lista[1].id == u.id
-    assert lista[0].ordem == 2
-    assert lista[1].ordem == 2
-
-
-def test_listar_habilidades_retorna_entidades_do_dominio() -> None:
-    conexao = criar_banco_com_habilidade()
-    modulo_id = criar_modulo_id(conexao)
-    criada = inserir_habilidade(conexao, criar_habilidade_exemplo(modulo_id=modulo_id))
-    conexao.commit()
-
-    lista = listar_habilidades_orderado(conexao)
-
-    assert len(lista) == 1
-    item = lista[0]
-    assert item.id == criada.id
-    assert item.modulo_id == modulo_id
-    assert item.nome == "Identificar variáveis"
-    assert item.ativa is True
-    assert isinstance(item, Habilidade)
 
 
 def criar_habilidade_sem_fuso_data_criacao() -> Habilidade:

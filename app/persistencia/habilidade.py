@@ -129,31 +129,6 @@ def reativar_habilidade(conexao: sqlite3.Connection, habilidade_id: int) -> Habi
     return ativar_habilidade(conexao, habilidade_id)
 
 
-def listar_habilidades_orderado(conexao: sqlite3.Connection) -> list[Habilidade]:
-    """Lista habilidades por (ordem, id) para ordenação estável sem unicidade de ordem."""
-    linhas = conexao.execute(
-        """
-        SELECT id, modulo_id, nome, descricao, ativa, ordem, data_criacao, data_atualizacao
-        FROM habilidade
-        ORDER BY ordem, id
-        """,
-    ).fetchall()
-
-    return [
-        Habilidade(
-            id=linha["id"],
-            modulo_id=linha["modulo_id"],
-            nome=linha["nome"],
-            descricao=linha["descricao"],
-            ativa=bool(linha["ativa"]),
-            ordem=linha["ordem"],
-            data_criacao=datetime.fromisoformat(linha["data_criacao"]),
-            data_atualizacao=datetime.fromisoformat(linha["data_atualizacao"]),
-        )
-        for linha in linhas
-    ]
-
-
 def atualizar_habilidade(
     conexao: sqlite3.Connection,
     habilidade: Habilidade,
