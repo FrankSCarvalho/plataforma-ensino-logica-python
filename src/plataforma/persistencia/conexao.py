@@ -1,4 +1,6 @@
 import sqlite3
 
-def criar_conexao():
-    return sqlite3.connect("plataforma.db")
+def criar_conexao(caminho="plataforma.db"):
+    conexao = sqlite3.connect(caminho)
+    conexao.execute("PRAGMA foreign_keys = ON")
+    return conexao
